@@ -14,8 +14,8 @@ def set_working_directory():
 
     os.chdir(new_directory)  
     logger.debug(f"工作目录修改为: {new_directory}")  
+    print(f"工作目录修改为: {new_directory}")
 
-    print(f"工作目录修改为: {new_directory}")  
     yield  
 
     os.chdir(original_dir)  
