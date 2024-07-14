@@ -7,6 +7,12 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+pandas = "^2.2.2"
+loguru = "^0.7.2"
+python-dotenv = "^1.0.1"
+pytest = "^8.2.2"
+psutil = "^6.0.0"
+pathlib2 = "^2.3.7.post1"
 
 
 [build-system]
