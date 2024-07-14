@@ -3,31 +3,50 @@ import configparser
 import psutil
 import subprocess
 import time
+import logging
 
+# 配置日志记录器
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+from .pyauto import WindowRegexFinder
 
 class ProgramMonitor:
-    def __init__(self, config_path):
-        # 打印用于调试的配置信息
-        print(f"Loading configuration from: {config_path}")
+    MINIXT_PROCESS_NAME = "XtMiniQmt.exe"
+    LOGIN_PROCESS_NAME = "XtItClient.exe"
 
+    def __init__(self, config_path="/config/config.ini"):
+        # 加载配置文件
         config = configparser.ConfigParser()
         files_read = config.read(config_path)
 
         if not files_read:
-            raise FileNotFoundError(f"Config file not found: {config_path}")
+            raise FileNotFoundError(f"配置文件未找到: {config_path}")
 
         if 'xt_client' not in config:
-            raise KeyError('The section xt_client is missing in the configuration file.')
+            raise KeyError('在配置文件中没找到名字为"xt_client"的section。')
 
-        self.program_name = config['xt_client']['program_dir']
-        self.process_name = config['xt_client']['process_name']
-        self.check_interval = config.getint('xt_client', 'check_interval')
+        self.program_name = config['xt_client'].get('program_dir')
+        if not self.program_name:
+            raise KeyError('在"xt_client"节中未找到键"program_dir"。')
+
+        self.check_interval = config.getint('xt_client', 'check_interval', fallback=60)
 
     def is_program_running(self):
         """检查是否有指定名称的程序正在运行"""
         for proc in psutil.process_iter(['name']):
             try:
-                if proc.info['name'] == self.process_name:
+                if proc.info['name'] == self.MINIXT_PROCESS_NAME:
+                    return True
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+        return False
+
+    def is_login_progress_running(self):
+        """检查是否有指定名称的登录进程正在运行"""
+        for proc in psutil.process_iter(['name']):
+            try:
+                if proc.info['name'] == self.LOGIN_PROCESS_NAME:
                     return True
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
@@ -37,22 +56,32 @@ class ProgramMonitor:
         """启动指定路径的程序"""
         try:
             subprocess.Popen(self.program_name)
-            print(f"程序 {self.program_name} 已启动。")
+            logger.info(f"程序 {self.program_name} 已启动。")
         except Exception as e:
-            print(f"无法启动程序 {self.program_name}：{e}")
+            logger.error(f"无法启动程序 {self.program_name}：{e}")
+        # 点击登录
+        time.sleep(15)
+        if self.is_login_progress_running():
+            finder = WindowRegexFinder(r"e海方舟-量化交易版[.\d ]+")
+            # 查找窗口句柄
+            finder.find_window()
+            # 将窗口置顶
+            finder.bring_window_to_top()
+            # 查找并点击图像按钮
+            finder.find_and_click_image_button("../config/login_button.PNG")
+
 
     def monitor(self):
         """开始监控程序状态"""
         while True:
             if not self.is_program_running():
-                print(f"检测到 {self.process_name} 未启动，正在启动...")
+                logger.info(f"检测到 {self.MINIXT_PROCESS_NAME} 未启动，正在启动...")
                 self.start_program()
             else:
-                print(f"{self.process_name} 正在运行。")
+                logger.info(f"{self.MINIXT_PROCESS_NAME} 正在运行。")
 
-                # 每隔指定时间间隔检测一次
+            # 每隔指定时间间隔检测一次
             time.sleep(self.check_interval)
-
 
 if __name__ == "__main__":
     config_path = os.path.join(os.path.dirname(__file__), 'config', 'config.ini')

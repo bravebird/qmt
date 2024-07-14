@@ -13,8 +13,16 @@ python-dotenv = "^1.0.1"
 pytest = "^8.2.2"
 psutil = "^6.0.0"
 pathlib2 = "^2.3.7.post1"
+pywin32 = "^306"
+pywinauto = "^0.6.8"
+pyautogui = "^0.9.54"
+opencv-python = "^4.10.0.84"
 
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[[tool.poetry.source]]
+name = "tuna"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
