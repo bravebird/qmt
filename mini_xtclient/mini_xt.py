@@ -1,31 +1,21 @@
 import os
-import configparser
+
 import psutil
 import subprocess
 import time
-import logging
 
 # 配置日志记录器
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
+from loggers import logger
+from config import config
 from .pyauto import WindowRegexFinder
+
 
 class ProgramMonitor:
     MINIXT_PROCESS_NAME = "XtMiniQmt.exe"
     LOGIN_PROCESS_NAME = "XtItClient.exe"
 
-    def __init__(self, config_path="/config/config.ini"):
+    def __init__(self):
         # 加载配置文件
-        config = configparser.ConfigParser()
-        files_read = config.read(config_path)
-
-        if not files_read:
-            raise FileNotFoundError(f"配置文件未找到: {config_path}")
-
-        if 'xt_client' not in config:
-            raise KeyError('在配置文件中没找到名字为"xt_client"的section。')
-
         self.program_name = config['xt_client'].get('program_dir')
         if not self.program_name:
             raise KeyError('在"xt_client"节中未找到键"program_dir"。')
@@ -54,6 +44,8 @@ class ProgramMonitor:
 
     def start_program(self):
         """启动指定路径的程序"""
+        if self.is_program_running():
+            logger.info("迅投程序已运行，无需启动。")
         try:
             subprocess.Popen(self.program_name)
             logger.info(f"程序 {self.program_name} 已启动。")
@@ -70,7 +62,6 @@ class ProgramMonitor:
             # 查找并点击图像按钮
             finder.find_and_click_image_button("../config/login_button.PNG")
 
-
     def monitor(self):
         """开始监控程序状态"""
         while True:
@@ -83,7 +74,7 @@ class ProgramMonitor:
             # 每隔指定时间间隔检测一次
             time.sleep(self.check_interval)
 
+
 if __name__ == "__main__":
-    config_path = os.path.join(os.path.dirname(__file__), 'config', 'config.ini')
-    monitor = ProgramMonitor(config_path)
+    monitor = ProgramMonitor()
     monitor.monitor()

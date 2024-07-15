@@ -6,7 +6,6 @@ import win32con
 import pyautogui
 import time
 import ctypes
-import logging
 
 # 检查并导入 OpenCV
 try:
@@ -15,8 +14,7 @@ except ImportError:
     raise ImportError("OpenCV 无法导入。请安装它，命令为 'pip install opencv-python'")
 
 # 配置日志记录器
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+from loggers import logger
 
 
 class WindowRegexFinder:
