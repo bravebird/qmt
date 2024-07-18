@@ -26,7 +26,8 @@ def sell_stock(stock_code, quantity, price=0, strategy_name='', order_remark='')
         # 其他市场，默认使用限价单
         order_type = 0
         # 发出卖出指令并打印响应信息
-    response = xt_trader.order_stock_async(acc, stock_code, 'sell', quantity, order_type, price, strategy_name,
+    logger.info(f"报价类型{order_type}")
+    response = xt_trader.order_stock_async(acc, stock_code, xtconstant.STOCK_SELL, quantity, order_type, price, strategy_name,
                                            order_remark)
     print(f'Sold {quantity} shares of {stock_code}. Response: {response}')
 
