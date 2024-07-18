@@ -1,8 +1,8 @@
 import os
-
 import psutil
 import subprocess
 import time
+from pathlib2 import Path
 
 # 配置日志记录器
 from loggers import logger
@@ -60,7 +60,31 @@ class ProgramMonitor:
             # 将窗口置顶
             finder.bring_window_to_top()
             # 查找并点击图像按钮
-            finder.find_and_click_image_button("../config/login_button.PNG")
+            path = Path(__file__).parent.parent / "config/login_button.PNG"
+            finder.find_and_click_image_button(str(path))
+
+    def stop_program(self):
+        """停止指定名称的程序"""
+        for proc in psutil.process_iter(['name']):
+            try:
+                if proc.info['name'] == self.MINIXT_PROCESS_NAME:
+                    proc.terminate()
+                    logger.info(f"程序 {self.MINIXT_PROCESS_NAME} 已停止。")
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess) as e:
+                logger.error(f"无法停止程序 {self.MINIXT_PROCESS_NAME}：{e}")
+            try:
+                if proc.info['name'] == self.LOGIN_PROCESS_NAME:
+                    proc.terminate()
+                    logger.info(f"程序 {self.LOGIN_PROCESS_NAME} 已停止。")
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess) as e:
+                logger.error(f"无法停止程序 {self.LOGIN_PROCESS_NAME}：{e}")
+
+    def restart_program(self):
+        """重启指定名称的程序"""
+        logger.info("正在重启程序...")
+        self.stop_program()
+        time.sleep(5)  # 等待进程完全结束
+        self.start_program()
 
     def monitor(self):
         """开始监控程序状态"""

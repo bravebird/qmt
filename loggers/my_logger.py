@@ -7,6 +7,7 @@ import os
 
 load_dotenv()  # 加载 .env 文件中的环境变量
 
+
 class LogManager:
     def __init__(
             self,
@@ -93,6 +94,7 @@ class LogManager:
     def error_interceptor(self, message):
         """拦截 TRADER 和 ERROR 级别的日志并发送邮件。"""
         self.send_error_mail(message.record)
+
 
 # 使用示例:
 if __name__ == "__main__":
