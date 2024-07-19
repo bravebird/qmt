@@ -68,6 +68,7 @@ def sell_stock(stock_code, quantity, price=0, strategy_name='', order_remark='')
     """
     卖出股票函数，根据股票代码后缀确定所属市场并设置order_type后，异步发出卖出指令。
     """
+    global positions
 
     if stock_code.endswith('.SH'):
         # 沪市：最优五档即时成交剩余撤销
@@ -84,6 +85,9 @@ def sell_stock(stock_code, quantity, price=0, strategy_name='', order_remark='')
                                            strategy_name,
                                            order_remark)
     logger.info(f'Sold {quantity} shares of {stock_code}. Response: {response}')
+    # 更新持仓信息
+    positions = xt_trader.query_stock_positions(acc)
+
 
 
 def abs_stop_loss(datas):
@@ -126,7 +130,9 @@ def stop_loss_max_profit(datas):
                     max_profit[stock_code] = (last_price - avg_price) / avg_price
 
                 current_profit = (last_price - avg_price) / avg_price
-                max_profit[stock_code] = max(max_profit[stock_code], current_profit)
+                if max_profit[stock_code] < current_profit:
+                    max_profit[stock_code] = current_profit
+                    save_max_profit()
 
                 # 判断回撤止损条件
                 if max_profit[stock_code] > 0.005 and current_profit <= max_profit[stock_code] * 0.5:
@@ -153,8 +159,9 @@ def stop_loss_large_profit(datas):
                     max_profit[stock_code] = (last_price - avg_price) / avg_price
 
                 current_profit = (last_price - avg_price) / avg_price
-                max_profit[stock_code] = max(max_profit[stock_code], current_profit)
-                # logger.info(f"{stock_code}-{avg_price}-{max_profit}-{current_profit}")
+                if max_profit[stock_code] < current_profit:
+                    max_profit[stock_code] = current_profit
+                    save_max_profit()
 
                 # 判断回撤止损条件
                 if max_profit[stock_code] > 0.20 and current_profit <= max_profit[stock_code] - 0.10:
@@ -168,9 +175,6 @@ def call_back_functions(data, last_update_time):
     global positions  # 声明使用全局变量 positions
     current_time = time.time()
 
-    # 调试信息：输出回调数据
-    logger.info(f"Received callback data: {data}")
-
     # 如果离上次更新小于10分钟，就不执行更新
     if current_time - last_update_time.value >= 600:
         positions = xt_trader.query_stock_positions(acc)  # 查询最新持仓信息
@@ -181,7 +185,7 @@ def call_back_functions(data, last_update_time):
         # 撤销未成交的订单
         pending_orders = xt_trader.query_stock_orders(acc)
         for order in pending_orders:
-            cancel_response = xt_trader.cancel_order(acc, order.order_id)
+            cancel_response = xt_trader.cancel_order_stock_async(acc, order.order_id)
             logger.info(f"撤销订单 {order.order_id}。Response: {cancel_response}")
 
         last_update_time.value = current_time  # 更新上次更新时间
@@ -190,7 +194,7 @@ def call_back_functions(data, last_update_time):
     stop_loss_max_profit(data)  # 执行最大盈利回撤止损策略
     stop_loss_large_profit(data)  # 执行高盈利回撤止损策略
 
-    save_max_profit()  # 保存最大收益率
+      # 保存最大收益率
 
 
 def csv_to_pkl(csv_file_path, pkl_file_path):

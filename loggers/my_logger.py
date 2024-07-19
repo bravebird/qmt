@@ -59,14 +59,17 @@ class LogManager:
         logger.add(
             log_file_path,
             format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {module}:{line} - {message}",
-            level="DEBUG",
-            rotation="3 MB",
+            rotation="1 days",  # 每 5 分钟分割一次日志文件
+            retention="10 days",  # 保留10天的日志
             compression="zip",
+            enqueue=True,
+            backtrace=True,
+            diagnose=True
         )
 
         # 添加拦截器
-        logger.add(self.error_interceptor, level=self.TRADER_LEVEL_NO)
-        logger.add(self.error_interceptor, level="ERROR")
+        logger.add(self.error_interceptor, level=self.TRADER_LEVEL_NO, enqueue=True)
+        logger.add(self.error_interceptor, level="ERROR", enqueue=True)
 
     def send_error_mail(self, record):
         """发送错误日志邮件."""
