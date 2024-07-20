@@ -9,6 +9,25 @@ logger = logging.getLogger(__name__)
 
 # 读取CSV文件
 file_path = 'assets/investment_targets/investment_targets.csv'
+
+
+
+
+import pandas as pd
+from xtquant import xtdata
+
+xtdata.download_history_data('90000967.SZO', period='tick')
+data = xtdata.get_local_data(field_list=[], stock_code=['90000967.SZO'], period='tick', count=10)
+
+df = pd.DataFrame(data['90000967.SZO'])
+print(df.iloc[-1])
+
+
+
+
+
+
+
 try:
     investment_targets = pd.read_csv(file_path)
     logger.info(f"Read CSV file from {file_path}")

@@ -1,14 +1,11 @@
-from xtquant.xttrader import XtQuantTrader, XtQuantTraderCallback
-from xtquant import xtconstant
+from xtquant.xttrader import XtQuantTrader
 from pathlib2 import Path
 from dotenv import load_dotenv
-import os
 import time
-import logging  # 添加日志库
 # 自定义包
 from loggers import logger
 from config import config
-from trader.utils import generate_session_id
+from utils.utils_general import generate_session_id
 from trader.xt_trader_callback import MyXtQuantTraderCallback
 from mini_xtclient.mini_xt import ProgramMonitor
 from trader.xt_acc import acc

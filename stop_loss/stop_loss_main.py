@@ -1,23 +1,22 @@
 import csv  # 用于读取CSV文件
 import pickle  # 用于序列化和反序列化Python对象
 import time  # 用于获取当前时间
+import os
 from multiprocessing import Manager
 from trader import xt_trader, acc
 from xtquant import xtconstant
 from xtquant import xtdata
-from loggers import logger
-
-# 定义文件路径
-MAX_PROFIT_FILE = 'assets/max_profit.pkl'
-STOCK_LIST_CSV_FILE = './assets/investment_targets/investment_targets.csv'
-STOCK_LIST_PKL_FILE = './assets/investment_targets/investment_targets.pkl'
+from pathlib2 import Path
+# 自定义模块
+from loggers import logger  # 日志记录器
+from utils.utils_data import get_targets_list_from_csv
 
 # 初始化全局变量
 max_profit = {}
 positions = []
 
 
-def save_max_profit():
+def save_max_profit(max_profit_file ='./assets/runtime/max_profit.pkl'):
     """
     保存最大收益率字典到Pickle文件
     """
@@ -39,26 +38,26 @@ def save_max_profit():
 
             # 保存更新后的 max_profit 字典到 Pickle 文件
     try:
-        with open(MAX_PROFIT_FILE, 'wb') as f:
+        with open(max_profit_file, 'wb') as f:
             pickle.dump(max_profit, f)
-        logger.info(f"Max profit saved successfully to {MAX_PROFIT_FILE}")
+        logger.info(f"Max profit saved successfully to {max_profit_file}")
     except Exception as e:
         logger.error(f"Error saving max profit to Pickle file: {e}")
 
 
-def load_max_profit():
+def load_max_profit(max_profit_file ='./assets/runtime/max_profit.pkl'):
     """
     从Pickle文件加载最大收益率字典
     """
     global max_profit
 
     try:
-        with open(MAX_PROFIT_FILE, 'rb') as f:
+        with open(max_profit_file, 'rb') as f:
             max_profit = pickle.load(f)
-        logger.info(f"Max profit loaded successfully from {MAX_PROFIT_FILE}")
+        logger.info(f"Max profit loaded successfully from {max_profit_file}")
     except FileNotFoundError:
         max_profit = {}
-        logger.warning(f"Max profit file not found: {MAX_PROFIT_FILE}. Starting with an empty dictionary.")
+        logger.warning(f"Max profit file not found: {max_profit_file}. Starting with an empty dictionary.")
     except Exception as e:
         logger.error(f"Error loading max profit from Pickle file: {e}")
         max_profit = {}
@@ -87,7 +86,6 @@ def sell_stock(stock_code, quantity, price=0, strategy_name='', order_remark='')
     logger.info(f'Sold {quantity} shares of {stock_code}. Response: {response}')
     # 更新持仓信息
     positions = xt_trader.query_stock_positions(acc)
-
 
 
 def abs_stop_loss(datas):
@@ -185,8 +183,9 @@ def call_back_functions(data, last_update_time):
         # 撤销未成交的订单
         pending_orders = xt_trader.query_stock_orders(acc)
         for order in pending_orders:
-            cancel_response = xt_trader.cancel_order_stock_async(acc, order.order_id)
-            logger.info(f"撤销订单 {order.order_id}。Response: {cancel_response}")
+            if order.order_status == xtconstant.ORDER_PART_SUCC:
+                cancel_response = xt_trader.cancel_order_stock_async(acc, order.order_id)
+                logger.info(f"撤销订单 {order.order_id}。Response: {cancel_response}")
 
         last_update_time.value = current_time  # 更新上次更新时间
 
@@ -194,50 +193,14 @@ def call_back_functions(data, last_update_time):
     stop_loss_max_profit(data)  # 执行最大盈利回撤止损策略
     stop_loss_large_profit(data)  # 执行高盈利回撤止损策略
 
-      # 保存最大收益率
-
-
-def csv_to_pkl(csv_file_path, pkl_file_path):
-    """
-    将CSV文件转换为Pickle文件
-    """
-    stock_list = []
-    try:
-        with open(csv_file_path, mode='r', encoding='utf-8') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                if row['STATUS'] == 'True':
-                    stock_list.append(row['SECURE'])
-        with open(pkl_file_path, 'wb') as file:
-            pickle.dump(stock_list, file)
-        logger.info(f"Converted {csv_file_path} to {pkl_file_path}")
-    except Exception as e:
-        logger.error(f"Error converting CSV to Pickle: {e}")
-
-
-def get_stock_list_from_pkl(file_path):
-    """
-    从Pickle文件中读取股票代码列表
-    """
-    stock_list = []
-    try:
-        with open(file_path, 'rb') as file:
-            stock_list = pickle.load(file)
-    except FileNotFoundError:
-        logger.error(f"File not found: {file_path}")
-    except Exception as e:
-        logger.error(f"Error reading stock list from Pickle file: {e}")
-    return stock_list
-
 
 if __name__ == '__main__':
     manager = Manager()
     last_update_time = manager.Value('d', time.time())  # 使用Manager创建共享变量
 
     load_max_profit()  # 加载最大收益率
-    csv_to_pkl(STOCK_LIST_CSV_FILE, STOCK_LIST_PKL_FILE)  # 将CSV文件转换为Pickle文件
     positions = xt_trader.query_stock_positions(acc)  # 初始化positions
-    stock_list = get_stock_list_from_pkl(STOCK_LIST_PKL_FILE)  # 从Pickle文件读取股票列表
+    stock_list = get_targets_list_from_csv()  # 从Pickle文件读取股票列表
     logger.info(stock_list)
     xtdata.subscribe_whole_quote(stock_list,
                                  callback=lambda data: call_back_functions(data, last_update_time))  # 订阅股票数据并设置回调函数

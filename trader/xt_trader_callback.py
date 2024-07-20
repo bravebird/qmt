@@ -5,7 +5,7 @@ from xtquant import xtconstant
 # 自定义包
 from loggers import logger
 from config import config
-from trader.utils import generate_session_id
+from utils.utils_general import generate_session_id
 from pathlib import Path
 from dotenv import load_dotenv
 import os
