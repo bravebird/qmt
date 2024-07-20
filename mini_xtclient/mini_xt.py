@@ -60,7 +60,7 @@ class ProgramMonitor:
             # 将窗口置顶
             finder.bring_window_to_top()
             # 查找并点击图像按钮
-            path = Path(__file__).parent.parent / "config/login_button.PNG"
+            path = Path(__file__).parent.parent / "config/xt_login_button.PNG"
             finder.find_and_click_image_button(str(path))
 
     def stop_program(self):

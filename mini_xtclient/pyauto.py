@@ -116,6 +116,6 @@ if __name__ == "__main__":
         finder.bring_window_to_top()
 
         # 查找并点击图像按钮
-        finder.find_and_click_image_button("../config/login_button.PNG")
+        finder.find_and_click_image_button("../config/xt_login_button.PNG")
     except Exception as e:
         logger.error(e)
