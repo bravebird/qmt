@@ -3,13 +3,15 @@ import pickle  # 用于序列化和反序列化Python对象
 import time  # 用于获取当前时间
 import os
 from multiprocessing import Manager
-from trader import xt_trader, acc
+from trader import xt_trader, acc, setup_xt_trader
 from xtquant import xtconstant
 from xtquant import xtdata
 from pathlib2 import Path
+import importlib
 # 自定义模块
 from loggers import logger  # 日志记录器
 from utils.utils_data import get_targets_list_from_csv
+from utils.utils_xtclient import start_xt_client
 
 # 初始化全局变量
 max_profit = {}
@@ -195,13 +197,51 @@ def call_back_functions(data, last_update_time):
 
 
 if __name__ == '__main__':
-    manager = Manager()
-    last_update_time = manager.Value('d', time.time())  # 使用Manager创建共享变量
+    def xtdata_main():
+        manager = Manager()
+        last_update_time = manager.Value('d', time.time())  # 使用Manager创建共享变量
 
-    load_max_profit()  # 加载最大收益率
-    positions = xt_trader.query_stock_positions(acc)  # 初始化positions
-    stock_list = get_targets_list_from_csv()  # 从Pickle文件读取股票列表
-    logger.info(stock_list)
-    xtdata.subscribe_whole_quote(stock_list,
-                                 callback=lambda data: call_back_functions(data, last_update_time))  # 订阅股票数据并设置回调函数
-    xtdata.run()  # 启动数据接收和回调处理
+        load_max_profit()  # 加载最大收益率
+        positions = xt_trader.query_stock_positions(acc)  # 初始化positions
+        stock_list = get_targets_list_from_csv()  # 从Pickle文件读取股票列表
+        logger.info(stock_list)
+        xtdata.subscribe_whole_quote(stock_list,
+                                     callback=lambda data: call_back_functions(data, last_update_time))  # 订阅股票数据并设置回调函数
+        xtdata.run()
+    # def xtdata_monitor():
+    #     try:
+    #         xtdata.run()
+    #     except Exception as e:
+    #         logger.warning('行情服务连接断开')
+    #         logger.error(e)
+    #         if '行情服务连接断开' in str(e):
+    #             # logger.error(e)
+    #             start_xt_client()
+    #             xtdata.subscribe_whole_quote(stock_list,
+    #                                          callback=lambda data: call_back_functions(data, last_update_time))
+    #             xtdata.run()
+    #     else:
+    #         logger.error("!!!")
+    #         return None
+    #     return xtdata
+    # while True:
+    #     xtdata_monitor()  # 启动数据接收和回调处理
+    #     time.sleep(10)
+
+    while True:
+        try:
+            logger.debug('运行xtdata订阅服务。')
+            xtdata_main()
+        except Exception as e:
+            logger.warning("重启mini迅投客户端。")
+            logger.error(e)
+            start_xt_client()
+            # signal.signal(signal.SIGALRM, handler)
+            # signal.alarm(20)
+        finally:
+            logger.debug("finally-已经重启客户端，等待三秒。")
+            time.sleep(3)
+            continue
+
+
+

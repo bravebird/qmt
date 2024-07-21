@@ -41,6 +41,7 @@ try:
     xt_trader = setup_xt_trader()
 except Exception as e:
     logger.critical("Critical error in main: ", exc_info=e)
+    # xt_trader.subscribe(acc)
 xt_trader.subscribe(acc)
 
 if __name__ == '__main__':

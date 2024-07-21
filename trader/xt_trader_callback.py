@@ -1,14 +1,17 @@
 from xtquant.xttrader import XtQuantTrader, XtQuantTraderCallback
 from xtquant.xttype import StockAccount
+# from xtquant import xtdata
 from xtquant import xtconstant
-
-# 自定义包
-from loggers import logger
-from config import config
-from utils.utils_general import generate_session_id
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+import time
+# 自定义包
+from loggers import logger
+from config import config
+from mini_xtclient.mini_xt import ProgramMonitor
+from utils.utils_general import generate_session_id
+# from utils.utils_xtclient import start_xt_client
 
 
 class MyXtQuantTraderCallback(XtQuantTraderCallback):
@@ -18,7 +21,11 @@ class MyXtQuantTraderCallback(XtQuantTraderCallback):
         连接断开
         :return:
         """
-        logger.warning("connection lost")
+        logger.warning("连接丢失，检查客户端是否启动。")
+        # 交给错误处理程序处理。
+        raise Exception("行情服务连接断开")
+        # return None
+
 
     def on_stock_order(self, order):
         """
@@ -88,8 +95,35 @@ class MyXtQuantTraderCallback(XtQuantTraderCallback):
         :param status: XtAccountStatus 对象
         :return:
         """
-        logger.info(
-            f"on_account_status: {status.account_id}, account_type: {status.account_type}, status: {status.status}")
+        match status.status:
+            case xtconstant.ACCOUNT_STATUS_INVALID:
+                logger.info("账户无效。")
+            case xtconstant.ACCOUNT_STATUS_OK:
+                logger.info("账户正常。")
+            case xtconstant.ACCOUNT_STATUS_WAITING_LOGIN:
+                logger.info("账户连接中。")
+                # xt_client = ProgramMonitor()
+                # xt_client.start_program()
+            case xtconstant.ACCOUNT_STATUSING:
+                logger.info("账户登录中。")
+            case xtconstant.ACCOUNT_STATUS_FAIL:
+                logger.info("账户登录失败。")
+            case xtconstant.ACCOUNT_STATUS_INITING:
+                logger.info("账户初始化中。")
+            case xtconstant.ACCOUNT_STATUS_CORRECTING:
+                logger.info("账户数据刷新校正中。")
+            case xtconstant.ACCOUNT_STATUS_CLOSED:
+                logger.info("收盘后。")
+            case xtconstant.ACCOUNT_STATUS_ASSIS_FAIL:
+                logger.info("穿透副链接断开。")
+            case xtconstant.ACCOUNT_STATUS_DISABLEBYSYS:
+                logger.info("系统停用（密码错误超限）。")
+            case xtconstant.ACCOUNT_STATUS_DISABLEBYUSER:
+                logger.info("用户停用。")
+            case _:
+                logger.info("无效的账户状态。")
+                logger.info(
+                    f"on_account_status: {status.account_id}, account_type: {status.account_type}, status: {status.status}")
 
 
 if __name__ == "__main__":
