@@ -1,84 +1,125 @@
 import xtquant.xtdata as xtdata
-import datetime
+from datetime import datetime
 import pandas as pd
-import logging
-
-# 设置日志
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# 读取CSV文件
-file_path = 'assets/investment_targets/investment_targets.csv'
+from utils.utils_data import get_targets_list_from_csv  # 获取股票列表
 
 
+def download_stock_data(period='1d', start_time=None, end_time=None, callback=None):
+    """
+    从 CSV 文件获取股票列表并下载历史数据。
+
+    :param period: 时间周期，默认 '1d'
+    :param start_time: 起始时间，格式为 'YYYYMMDD'，默认 '20200101'
+    :param end_time: 结束时间，格式为 'YYYYMMDD'，默认当前日期
+    :param callback: 下载数据时的回调函数，默认 None
+    """
+    # 获取股票列表
+    stock_list = get_targets_list_from_csv()
+
+    # 如果未提供 start_time，则默认设置为 '20200101'
+    if start_time is None:
+        start_time = '20200101'
+
+    # 如果未提供 end_time，则设置为当前日期，格式为 'YYYYMMDD'
+    if end_time is None:
+        end_time = datetime.now().strftime('%Y%m%d')
+
+    # 调用 xtdata.download_history_data2 方法下载历史数据
+    xtdata.download_history_data2(stock_list, period, start_time, end_time, callback)
 
 
-import pandas as pd
-from xtquant import xtdata
+def get_stock_data_as_dataframe(stock_list, period='1d', start_time=None, end_time=None):
+    """
+    获取股票历史数据并返回 pandas DataFrame。
 
-xtdata.download_history_data('90000967.SZO', period='tick')
-data = xtdata.get_local_data(field_list=[], stock_code=['90000967.SZO'], period='tick', count=10)
+    :param stock_list: 要获取数据的股票列表
+    :param period: 时间周期，默认 '1d'
+    :param start_time: 起始时间，格式为 'YYYYMMDD'
+    :param end_time: 结束时间，格式为 'YYYYMMDD'，默认当前日期
+    :return: 包含股票数据的 pandas DataFrame
+    """
+    if start_time is None:
+        start_time = '20200101'
+    if end_time is None:
+        end_time = datetime.now().strftime('%Y%m%d')
+    stock_list = get_targets_list_from_csv()
 
-df = pd.DataFrame(data['90000967.SZO'])
-print(df.iloc[-1])
+    # 获取所有股票的历史数据
+    market_data = xtdata.get_market_data(
+        field_list=[],  # 为空时，获取全部字段
+        stock_list=stock_list,
+        period=period,
+        start_time=start_time,
+        end_time=end_time,
+        count=-1,
+        dividend_type='front_ratio',
+        fill_data=True
+    )
+
+    # 数据整合到一个 pd.DataFrame 中， 数据结构优化
+    df_list = []
+    for field, df in market_data.items():
+        # 转置 DataFrame，使日期为行，股票代码为列
+        df_stock = df.stack()
+        df_stock.index.names = ['stock_code', 'date']
+        df_stock.name = field
+        df_stock = pd.DataFrame(df_stock)
+        df_list.append(df_stock)
+    combined_df = pd.concat(df_list, axis=1)
+
+    return combined_df
 
 
+def save_data_to_csv(df, filename='./assets/data/combined_market_data.csv'):
+    """
+    将数据保存到CSV文件中。
+
+    :param df: 数据 DataFrame
+    :param filename: 文件名，默认为 'combined_market_data.csv'
+    """
+    df.to_csv(filename)
+    print(f'Saved data to {filename}')
 
 
+def download_get_and_save_kline_date(period='1d', start_time=None, end_time=None, callback=None):
+    download_stock_data(period=period, start_time=start_time, end_time=end_time, callback=callback)
 
+    # 获取股票列表
+    stock_list = get_targets_list_from_csv()
 
+    # 获取股票数据并存储到 DataFrame
+    combined_df = get_stock_data_as_dataframe(stock_list=stock_list, period=period, start_time=start_time, end_time=end_time)
 
-try:
-    investment_targets = pd.read_csv(file_path)
-    logger.info(f"Read CSV file from {file_path}")
-except Exception as e:
-    logger.error(f"Error reading CSV file from {file_path}: {e}")
-    raise
+    # 打印前几行数据并保存到 CSV 文件
+    print("Combined data:")
+    print(combined_df.tail())
 
-# 获取当前时间
-end_time = datetime.datetime.now().strftime('%Y%m%d')
-logger.info(f"Current end_time set to {end_time}")
+    # 将数据保存为 CSV 文件
+    now = datetime.now().strftime('%Y%m%d%H%M%S')
+    filename = f'./assets/data/combined_{period}_data_{now}.csv'
+    save_data_to_csv(combined_df, filename=filename)
 
-# 股票代码列表
-try:
-    stock_codes = investment_targets['SECURE'].tolist()
-    logger.info(f"Stock codes extracted: {stock_codes}")
-except KeyError as e:
-    logger.error(f"Error extracting stock codes: {e}")
-    raise
-
-# 下载数据函数
-def download_data(stock_codes, period='1d', start_time='20200101', end_time=end_time):
-    logger.info("Starting data download...")
-    for code in stock_codes:
-        try:
-            logger.info(f"Downloading data for {code}...")
-            xtdata.download_history_data(
-                stock_code=code,
-                period=period,
-                start_time=start_time,
-                end_time=end_time,
-                incrementally=False
-            )
-            logger.info(f"Data download completed for {code}.")
-        except Exception as e:
-            logger.error(f"Error downloading data for {code}: {e}")
-
-# 下载数据
-download_data(stock_codes)
-
-def on_callback(data):
-    print("data_call_back")
-    print(data)
-
-xtdata.download_history_data2(
-    stock_codes,
-    '1d',
-    start_time='20200101',
-    end_time=end_time,
-    callback=on_callback,
-    incrementally=False
-)
 
 if __name__ == '__main__':
-    logger.info("Script executed successfully.")
+    import schedule, time
+
+    # 获取今天的日期
+    today = datetime.now().date()
+
+    # 设置定时任务
+    schedule.every().day.at("10:00").do(download_get_and_save_kline_date)
+    schedule.every().day.at("11:00").do(download_get_and_save_kline_date)
+    schedule.every().day.at("11:29").do(download_get_and_save_kline_date)
+
+    # 启动时运行一次
+    download_get_and_save_kline_date()
+
+    while True:
+        # 检查今天的日期
+        if datetime.now().date() != today:
+            break  # 如果不是今天，退出循环
+
+        schedule.run_pending()
+        time.sleep(1)
+
+

@@ -208,25 +208,6 @@ if __name__ == '__main__':
         xtdata.subscribe_whole_quote(stock_list,
                                      callback=lambda data: call_back_functions(data, last_update_time))  # 订阅股票数据并设置回调函数
         xtdata.run()
-    # def xtdata_monitor():
-    #     try:
-    #         xtdata.run()
-    #     except Exception as e:
-    #         logger.warning('行情服务连接断开')
-    #         logger.error(e)
-    #         if '行情服务连接断开' in str(e):
-    #             # logger.error(e)
-    #             start_xt_client()
-    #             xtdata.subscribe_whole_quote(stock_list,
-    #                                          callback=lambda data: call_back_functions(data, last_update_time))
-    #             xtdata.run()
-    #     else:
-    #         logger.error("!!!")
-    #         return None
-    #     return xtdata
-    # while True:
-    #     xtdata_monitor()  # 启动数据接收和回调处理
-    #     time.sleep(10)
 
     while True:
         try:

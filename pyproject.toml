@@ -19,6 +19,7 @@ pyautogui = "^0.9.54"
 opencv-python = "^4.10.0.84"
 matplotlib = "^3.9.1"
 darts = "^0.30.0"
+schedule = "^1.2.2"
 
 
 [build-system]
