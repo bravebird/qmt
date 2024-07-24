@@ -8,7 +8,7 @@ def get_targets_list_from_csv():
     """
     从csv文件中读取股票代码列表
     """
-    csv_file_path = str(Path(config['data']['investment_targets']))
+    csv_file_path = str(Path(config['data']['investment_targets']).absolute())
     stock_list = []
     try:
         with open(csv_file_path, mode='r', encoding='utf-8') as file:

@@ -85,7 +85,7 @@ def sell_stock(stock_code, quantity, price=0, strategy_name='', order_remark='')
     response = xt_trader.order_stock_async(acc, stock_code, xtconstant.STOCK_SELL, quantity, order_type, price,
                                            strategy_name,
                                            order_remark)
-    logger.info(f'Sold {quantity} shares of {stock_code}. Response: {response}')
+    logger.log("TRADER", f'卖出股票【{stock_code}】，数量【{quantity}】，返回值为【 {response}】')
     # 更新持仓信息
     positions = xt_trader.query_stock_positions(acc)
 

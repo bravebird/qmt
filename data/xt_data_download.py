@@ -22,13 +22,13 @@ def download_stock_data(period='1d', start_time=None, end_time=None, callback=No
 
     # 如果未提供 end_time，则设置为当前日期，格式为 'YYYYMMDD'
     if end_time is None:
-        end_time = datetime.now().strftime('%Y%m%d')
+        end_time = datetime.now().strftime('%Y%m%d%H%M%S')
 
     # 调用 xtdata.download_history_data2 方法下载历史数据
     xtdata.download_history_data2(stock_list, period, start_time, end_time, callback)
 
 
-def get_stock_data_as_dataframe(stock_list, period='1d', start_time=None, end_time=None):
+def get_stock_data_as_dataframe(period='1d', start_time=None, end_time=None):
     """
     获取股票历史数据并返回 pandas DataFrame。
 
@@ -41,11 +41,11 @@ def get_stock_data_as_dataframe(stock_list, period='1d', start_time=None, end_ti
     if start_time is None:
         start_time = '20200101'
     if end_time is None:
-        end_time = datetime.now().strftime('%Y%m%d')
+        end_time = datetime.now().strftime('%Y%m%d%H%M%S')
     stock_list = get_targets_list_from_csv()
 
     # 获取所有股票的历史数据
-    market_data = xtdata.get_market_data(
+    market_data = xtdata.get_local_data(
         field_list=[],  # 为空时，获取全部字段
         stock_list=stock_list,
         period=period,
@@ -60,12 +60,14 @@ def get_stock_data_as_dataframe(stock_list, period='1d', start_time=None, end_ti
     df_list = []
     for field, df in market_data.items():
         # 转置 DataFrame，使日期为行，股票代码为列
-        df_stock = df.stack()
-        df_stock.index.names = ['stock_code', 'date']
-        df_stock.name = field
-        df_stock = pd.DataFrame(df_stock)
-        df_list.append(df_stock)
-    combined_df = pd.concat(df_list, axis=1)
+        df['stock_code'] = field
+        # df_stock = df.stack()
+        # df_stock.index.names = ['stock_code', 'date']
+        df.index.name = 'date'
+        # df_stock.name = field
+        # df_stock = pd.DataFrame(df_stock)
+        df_list.append(df)
+    combined_df = pd.concat(df_list, axis=0)
 
     return combined_df
 
@@ -88,7 +90,7 @@ def download_get_and_save_kline_date(period='1d', start_time=None, end_time=None
     stock_list = get_targets_list_from_csv()
 
     # 获取股票数据并存储到 DataFrame
-    combined_df = get_stock_data_as_dataframe(stock_list=stock_list, period=period, start_time=start_time, end_time=end_time)
+    combined_df = get_stock_data_as_dataframe(period=period, start_time=start_time, end_time=end_time)
 
     # 打印前几行数据并保存到 CSV 文件
     print("Combined data:")
@@ -98,6 +100,7 @@ def download_get_and_save_kline_date(period='1d', start_time=None, end_time=None
     now = datetime.now().strftime('%Y%m%d%H%M%S')
     filename = f'./assets/data/combined_{period}_data_{now}.csv'
     save_data_to_csv(combined_df, filename=filename)
+    return combined_df
 
 
 if __name__ == '__main__':
