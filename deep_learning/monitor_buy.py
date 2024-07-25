@@ -6,8 +6,8 @@ import traceback
 import math
 from datetime import datetime, timedelta
 from darts.models import TSMixerModel
-from xtquant import xtconstant, xttrader
-
+from xtquant import xtconstant
+from pathlib2 import Path
 import pandas as pd
 from apscheduler.executors.pool import ProcessPoolExecutor
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -23,10 +23,12 @@ if str(path) not in sys.path:
     sys.path.insert(0, str(path))
 
 from deep_learning.tsmixer import get_training_data
+from utils.utils_data import get_max_ask_price
 from trader.xt_acc import acc
 from trader.xt_trader import xt_trader
 from trader.xt_data import xt_data
 from loggers import logger
+
 
 # 设置最大持仓数
 MAX_POSITIONS = 2
@@ -42,49 +44,51 @@ def buy_stock_async(stocks, strategy_name='', order_remark=''):
     for stock_code in stocks:
         if stock_code.endswith('.SH'):
             # 沪市：最优五档即时成交剩余撤销
-            order_type = xtconstant.MARKET_SH_CONVERT_5_CANCEL
+            order_type = xtconstant.FIX_PRICE
         elif stock_code.endswith('.SZ'):
             # 深市：最优五档即时成交剩余撤销
-            order_type = xtconstant.MARKET_SZ_CONVERT_5_CANCEL
+            order_type = xtconstant.FIX_PRICE
         else:
             # 其他市场，默认使用限价单
-            order_type = 0
+            order_type = xtconstant.FIX_PRICE
 
         logger.info(f"股票【{stock_code}】报价类型为：{order_type}")
 
         asset = xt_trader.query_stock_asset(acc)
         positions = xt_trader.query_stock_positions(acc)
-        position_count = len([pos.stock_code for pos in positions if pos.volume > 0])
+        position_list = [pos.stock_code for pos in positions if pos.volume > 0]
+        position_count = len(position_list)
         available_slots = max(MAX_POSITIONS - position_count, 0)
 
         if available_slots == 0:
-            logger.info("当前持仓已满。")
+            logger.info(f"当前持仓已满:{position_list}。")
             continue
 
         cash = asset.cash
-        now = datetime.now().strftime("%Y%m%d%H%M%S")
-        market_data = xt_data.get_market_data(stock_list=[stock_code], period='tick', start_time=now)
+        max_ask_price = get_max_ask_price(stock_code)
 
-        if not market_data.get(stock_code):
-            logger.warning(f"未能获得股票数据：{stock_code}, 时间：{now}")
+        if not max_ask_price:
+            logger.warning(f"未能获得股票数据：{stock_code}")
             continue
 
-        price = market_data[stock_code][-1].get('askPrice')
-        if price == 0:
+        if max_ask_price == 0:
             logger.warning(f"委卖价为0，请检查{stock_code}的数据。")
             continue
 
-            # 计算可买数量，向上取整成100的倍数
-        quantity = math.ceil(cash / price / available_slots / 100) * 100
+        # 计算可买数量，向上取整成100的倍数
+        quantity = math.ceil(cash / max_ask_price / available_slots / 100) * 100
         if quantity <= 100:
-            logger.info(f"{stock_code} 可买数量不足，现金：{cash}, 当前股价：{price}")
+            logger.info(f"{stock_code} 可买数量不足，现金：{cash}, 当前股价：{max_ask_price}")
             continue
 
-        response = xt_trader.order_stock_async(acc, stock_code, xtconstant.STOCK_BUY, quantity, order_type, price,
+        response = xt_trader.order_stock_async(acc, stock_code, xtconstant.STOCK_BUY, quantity, order_type, max_ask_price,
                                                strategy_name, order_remark)
-        logger.info(f'买入股票【{stock_code}】，数量【{quantity}】，返回值【{response}】')
+        if response < 0:
+            logger.warning(f'【提交下单失败！】买入股票【{stock_code}】，数量【{quantity}】，返回值【{response}】')
+        else:
+            logger.info(f'【提交下单成功！】买入股票【{stock_code}】，数量【{quantity}】，返回值【{response}】')
 
-        # 更新持仓信息
+    # 更新持仓信息
     positions = xt_trader.query_stock_positions(acc)
     logger.info("更新持仓信息完成")
 
@@ -94,10 +98,12 @@ def trading_with_fitted_model():
     读入训练好的神经网络模型并生成交易列表。
     """
     logger.info("开始执行交易策略。")
+    model_path = Path(__file__).parent.parent / './assets/models/tsmixer_model.pth.pkl'
+    logger.info(model_path)
 
     try:
         # 加载模型
-        model = TSMixerModel.load('./assets/models/tsmixer_model.pth.pkl')
+        model = TSMixerModel.load(str(model_path))
         logger.info("模型加载成功。")
 
         # 准备数据
@@ -109,8 +115,8 @@ def trading_with_fitted_model():
         # 反转缩放并生成预测结果
         result = scaler_train.inverse_transform(prediction)
         df = result.pd_dataframe()
-        logger.info("预测结果生成。")
-        logger.info(df)
+        logger.info("预测结果已生成。")
+        # logger.info(df)
 
         result = df.iloc[0, :].sort_values(ascending=False) * 100
         to_buy = result[result > 0.2].index.to_list()
@@ -124,6 +130,26 @@ def trading_with_fitted_model():
         logger.error(traceback.format_exc())
 
 
+def is_trading_day():
+    """
+    判断当天是否为交易日。利用xtquant的get_trading_calendar方法获得交易信息。
+    """
+    today = datetime.now().strftime("%Y%m%d")
+    future_date = (datetime.now() + timedelta(days=1)).strftime("%Y%m%d")
+    calendar = xt_data.get_trading_calendar("SH", start_time=today, end_time=future_date)
+    return any(today == str(date) for date in calendar)
+
+
+def conditionally_execute_trading():
+    """
+    根据是否为交易日决定是否执行交易策略。
+    """
+    if is_trading_day():
+        trading_with_fitted_model()
+    else:
+        logger.info("今天不是交易日，交易策略未执行。")
+
+
 def schedule_trading_job():
     """
     配置并启动计划任务调度器。
@@ -132,13 +158,24 @@ def schedule_trading_job():
     executors = {
         'default': ProcessPoolExecutor(1)
     }
-    scheduler = BackgroundScheduler(executors=executors, timezone=local_tz)
-    scheduler.add_job(trading_with_fitted_model, 'cron', day_of_week='mon-fri', hour=14, minute=59)
+
+    job_defaults = {
+        'misfire_grace_time': 300,  # 5分钟的宽限时间
+        'coalesce': False,
+        'max_instances': 30
+    }
+
+    scheduler = BackgroundScheduler(executors=executors, job_defaults=job_defaults, timezone=local_tz)
+    now = datetime.now()
+    scheduler.add_job(conditionally_execute_trading, 'cron', day_of_week='mon-fri', hour=13, minute=3,
+                      next_run_time=now)
+    scheduler.add_job(conditionally_execute_trading, 'cron', day_of_week='mon-fri', hour=14, minute=59)
     scheduler.start()
     logger.info("任务调度器已启动。")
 
 
 if __name__ == '__main__':
+    # trading_with_fitted_model()
     try:
         schedule_trading_job()
         logger.info("主程序正在运行。按 Ctrl+C 终止。")
@@ -146,3 +183,4 @@ if __name__ == '__main__':
             time.sleep(1)
     except (KeyboardInterrupt, SystemExit):
         logger.info("程序终止。")
+

@@ -1,7 +1,9 @@
 import xtquant.xtdata as xtdata
 from datetime import datetime
 import pandas as pd
+from pathlib2 import Path
 from utils.utils_data import get_targets_list_from_csv  # 获取股票列表
+from loggers import logger
 
 
 def download_stock_data(period='1d', start_time=None, end_time=None, callback=None):
@@ -72,13 +74,17 @@ def get_stock_data_as_dataframe(period='1d', start_time=None, end_time=None):
     return combined_df
 
 
-def save_data_to_csv(df, filename='./assets/data/combined_market_data.csv'):
+path = Path(__file__).parent.parent
+
+
+def save_data_to_csv(df, filename=(path / 'assets/data/combined_market_data.csv').absolute()):
     """
     将数据保存到CSV文件中。
 
     :param df: 数据 DataFrame
     :param filename: 文件名，默认为 'combined_market_data.csv'
     """
+    logger.info(filename)
     df.to_csv(filename)
     print(f'Saved data to {filename}')
 
@@ -98,7 +104,7 @@ def download_get_and_save_kline_date(period='1d', start_time=None, end_time=None
 
     # 将数据保存为 CSV 文件
     now = datetime.now().strftime('%Y%m%d%H%M%S')
-    filename = f'./assets/data/combined_{period}_data_{now}.csv'
+    filename = Path(__file__).parent.parent / f'assets/data/combined_{period}_data_{now}.csv'
     save_data_to_csv(combined_df, filename=filename)
     return combined_df
 
@@ -124,5 +130,3 @@ if __name__ == '__main__':
 
         schedule.run_pending()
         time.sleep(1)
-
-

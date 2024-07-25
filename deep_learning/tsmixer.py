@@ -5,6 +5,7 @@ from darts.dataprocessing.transformers import Scaler
 from darts.models import NBEATSModel, TSMixerModel
 from sklearn.metrics import mean_squared_error
 from xtquant import xtdata
+from pathlib2 import Path
 from pickle import dump, load
 import joblib
 import torch
@@ -94,8 +95,8 @@ def get_training_data(training_or_predicting='training'):
     elif training_or_predicting == 'predicting':
         train = target_ts
         _, val = target_ts.split_after(0.92)
-        scaler_train = load(open('./assets/runtime/scaler_train.pkl', 'rb'))
-        scaler_past = load(open('./assets/runtime/scaler_past.pkl', 'rb'))
+        scaler_train = load(open(Path(__file__).parent.parent / 'assets/runtime/scaler_train.pkl', 'rb'))
+        scaler_past = load(open(Path(__file__).parent.parent / 'assets/runtime/scaler_past.pkl', 'rb'))
     else:
         raise ValueError("training_or_predicting must be 'training' or 'predicting'")
 

@@ -35,4 +35,5 @@ if __name__ == '__main__':
     print("获取全推数据")
     datas = xt_data.get_full_tick(code_list)
     print(datas)
+
     xt_data.run()
