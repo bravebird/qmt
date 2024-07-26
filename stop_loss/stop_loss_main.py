@@ -226,3 +226,4 @@ if __name__ == '__main__':
 
 
 
+xtdata.get_market_data()

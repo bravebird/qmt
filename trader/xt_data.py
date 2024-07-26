@@ -1,5 +1,7 @@
 from xtquant import xtdata as xt_data
 
+xt_data.connect()
+
 if __name__ == '__main__':
     code_list = ["000001.SZ"]
     # 设定获取数据的周期

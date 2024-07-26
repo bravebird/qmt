@@ -49,8 +49,8 @@ class MyXtQuantTraderCallback(XtQuantTraderCallback):
         :param trade: XtTrade对象
         :return:
         """
-        logger.info(
-            f"on trade callback: {trade.account_id}, stock_code: {trade.stock_code}, order_id: {trade.order_id}")
+        logger.log("TRADER",
+            f"股票成交回调: {trade.account_id}, 股票代码: {trade.stock_code}, 成交均价：{trade.traded_price}，成交数量:{trade.traded_volume}，委托ID: {trade.order_id}")
 
     def on_stock_position(self, position):
         """
@@ -216,3 +216,5 @@ if __name__ == "__main__":
 
         # 阻塞线程，接收交易推送
     xt_trader.run_forever()
+
+
