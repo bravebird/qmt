@@ -1,5 +1,7 @@
 import time
 import random
+from datetime import datetime, timedelta
+from xtquant import xtdata
 
 def generate_session_id():
     """
@@ -21,3 +23,13 @@ def generate_session_id():
     session_id = (date_int << 12) | random_number
 
     return session_id
+
+
+def is_trading_day():
+    """
+    判断当天是否为交易日。利用xtquant的get_trading_calendar方法获得交易信息。
+    """
+    today = datetime.now().strftime("%Y%m%d")
+    future_date = (datetime.now() + timedelta(days=1)).strftime("%Y%m%d")
+    calendar = xtdata.get_trading_calendar("SH", start_time=today, end_time=future_date)
+    return any(today == str(date) for date in calendar)

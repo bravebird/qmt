@@ -2,19 +2,15 @@ import pandas as pd
 import numpy as np
 from darts import TimeSeries
 from darts.dataprocessing.transformers import Scaler
-from darts.models import NBEATSModel, TSMixerModel
-from sklearn.metrics import mean_squared_error
+from darts.models import TSMixerModel
 from xtquant import xtdata
 from pathlib2 import Path
 from pickle import dump, load
-import joblib
-import torch
-import os
-from datetime import datetime
 # 自定义部分
 from data.xt_data_download import download_get_and_save_kline_date
 from loggers import logger
 from deep_learning.model_config import ModelParameters
+from utils.utils_general import is_trading_day
 
 
 def get_training_data(training_or_predicting='training'):
@@ -107,7 +103,11 @@ def get_training_data(training_or_predicting='training'):
     return train, val, past_cov_ts, future_cov_ts, scaler_train
 
 
-if __name__ == '__main__':
+def fit_tsmixer_model():
+    if not is_trading_day():
+        logger.info("今天不是交易日")
+        return False
+
     train, val, past_cov_ts, future_cov_ts, scaler_train = get_training_data()
 
     # 5. 准备模型
@@ -131,4 +131,6 @@ if __name__ == '__main__':
     # 保存模型
     model.save('./assets/models/tsmixer_model.pth.pkl')
 
-    # 评估模型
+
+if __name__ == '__main__':
+    fit_tsmixer_model()

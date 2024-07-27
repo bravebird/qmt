@@ -24,6 +24,7 @@ if str(path) not in sys.path:
 
 from deep_learning.tsmixer import get_training_data
 from utils.utils_data import get_max_ask_price
+from utils.utils_general import is_trading_day
 from trader.xt_acc import acc
 from trader.xt_trader import xt_trader
 from trader.xt_data import xt_data
@@ -128,16 +129,6 @@ def trading_with_fitted_model():
     except Exception as e:
         logger.error(f"交易执行过程中出现错误：{str(e)}")
         logger.error(traceback.format_exc())
-
-
-def is_trading_day():
-    """
-    判断当天是否为交易日。利用xtquant的get_trading_calendar方法获得交易信息。
-    """
-    today = datetime.now().strftime("%Y%m%d")
-    future_date = (datetime.now() + timedelta(days=1)).strftime("%Y%m%d")
-    calendar = xt_data.get_trading_calendar("SH", start_time=today, end_time=future_date)
-    return any(today == str(date) for date in calendar)
 
 
 def conditionally_execute_trading():

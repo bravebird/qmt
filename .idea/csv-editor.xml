@@ -3,35 +3,7 @@
   <component name="CsvFileAttributes">
     <option name="attributeMap">
       <map>
-        <entry key="\assets\data\combined_1d_data_20240722052949.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="\assets\data\combined_1d_data_20240722100000.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="\assets\data\combined_1d_data_20240722110000.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="\assets\data\combined_1d_data_20240722112900.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="\assets\data\combined_1d_data_20240722134801.csv">
+        <entry key="\assets\data\combined_1d_data_20240726185613.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />

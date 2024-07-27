@@ -12,6 +12,7 @@ import importlib
 from loggers import logger  # 日志记录器
 from utils.utils_data import get_targets_list_from_csv
 from utils.utils_xtclient import start_xt_client
+from utils.utils_general import is_trading_day
 
 # 初始化全局变量
 max_profit = {}
@@ -196,23 +197,31 @@ def call_back_functions(data, last_update_time):
     stop_loss_large_profit(data)  # 执行高盈利回撤止损策略
 
 
-if __name__ == '__main__':
-    def xtdata_main():
-        manager = Manager()
-        last_update_time = manager.Value('d', time.time())  # 使用Manager创建共享变量
+def stop_loss_main():
+    if not is_trading_day():
+        logger.info("今天不是交易日")
+        return False
 
-        load_max_profit()  # 加载最大收益率
-        positions = xt_trader.query_stock_positions(acc)  # 初始化positions
-        stock_list = get_targets_list_from_csv()  # 从Pickle文件读取股票列表
-        logger.info(stock_list)
-        xtdata.subscribe_whole_quote(stock_list,
-                                     callback=lambda data: call_back_functions(data, last_update_time))  # 订阅股票数据并设置回调函数
-        xtdata.run()
+    manager = Manager()
+    last_update_time = manager.Value('d', time.time())  # 使用Manager创建共享变量
+
+    load_max_profit()  # 加载最大收益率
+    stock_list = get_targets_list_from_csv()  # 从Pickle文件读取股票列表
+    logger.info(stock_list)
+    xtdata.subscribe_whole_quote(
+        stock_list,
+        callback=lambda data: call_back_functions(data, last_update_time)
+    )  # 订阅股票数据并设置回调函数
+    logger.info("止损程序启动")
+    xtdata.run()
+
+
+if __name__ == '__main__':
 
     while True:
         try:
             logger.debug('运行xtdata订阅服务。')
-            xtdata_main()
+            stop_loss_main()
         except Exception as e:
             logger.warning("重启mini迅投客户端。")
             logger.error(e)
@@ -226,4 +235,3 @@ if __name__ == '__main__':
 
 
 
-xtdata.get_market_data()

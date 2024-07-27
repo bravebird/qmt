@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 from loggers import logger
 from config import config
-from .pyauto import WindowRegexFinder
+from mini_xtclient.pyauto import WindowRegexFinder
 from multiprocessing import Lock, Queue, Process
 
 
@@ -129,9 +129,13 @@ class ProgramMonitor:
             task(*args, **kwargs)
             cls.task_queue.task_done()
 
+def start_miniqmt():
+    monitor = ProgramMonitor()
+    monitor.start_program()
 
 if __name__ == "__main__":
     monitor = ProgramMonitor()
+    monitor.start_program()
 
     # 创建一个额外的进程以监控队列中的任务执行
     worker_process = Process(target=ProgramMonitor.worker)
