@@ -76,21 +76,26 @@ def get_training_data(training_or_predicting='training'):
     # 暂无。
     # 4. 数据标准化。
     target_ts = TimeSeries.from_dataframe(target_df)
+    start_index = target_ts.time_index[-1000]
+    target_ts = target_ts[start_index:]
     target_ts = target_ts.astype(np.float32)
     past_cov_ts = TimeSeries.from_dataframe(past_cov_df)
+    past_cov_ts = past_cov_ts[start_index:]
     past_cov_ts = past_cov_ts.astype(np.float32)
     future_cov_ts = TimeSeries.from_dataframe(future_cov_df)
+    future_cov_ts = future_cov_ts[start_index:]
     future_cov_ts = future_cov_ts.astype(np.float32)
-
     if training_or_predicting == 'training':
-        train, val = target_ts.split_after(0.92)
+        train = target_ts[ : -60]
+        val = target_ts[-80: ]
+        # train, val = target_ts.split_after(0.92)
         scaler_train = Scaler(name='train').fit(train)
         scaler_past = Scaler(name='past').fit(past_cov_ts)
         dump(scaler_train, open('./assets/runtime/scaler_train.pkl', 'wb'))
         dump(scaler_past, open('./assets/runtime/scaler_past.pkl', 'wb'))
     elif training_or_predicting == 'predicting':
         train = target_ts
-        _, val = target_ts.split_after(0.92)
+        val = target_ts[-80: ]
         scaler_train = load(open(Path(__file__).parent.parent / 'assets/runtime/scaler_train.pkl', 'rb'))
         scaler_past = load(open(Path(__file__).parent.parent / 'assets/runtime/scaler_past.pkl', 'rb'))
     else:
@@ -103,8 +108,8 @@ def get_training_data(training_or_predicting='training'):
     return train, val, past_cov_ts, future_cov_ts, scaler_train
 
 
-def fit_tsmixer_model():
-    if not is_trading_day():
+def fit_tsmixer_model(test=False):
+    if not (is_trading_day() or test):
         logger.info("今天不是交易日")
         return False
 

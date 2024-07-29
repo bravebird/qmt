@@ -77,7 +77,7 @@ def buy_stock_async(stocks, strategy_name='', order_remark=''):
             continue
 
         # 计算可买数量，向上取整成100的倍数
-        quantity = math.ceil(cash / max_ask_price / available_slots / 100) * 100
+        quantity = math.floor(cash / max_ask_price / available_slots / 100) * 100
         if quantity <= 100:
             logger.info(f"{stock_code} 可买数量不足，现金：{cash}, 当前股价：{max_ask_price}")
             continue
@@ -131,11 +131,11 @@ def trading_with_fitted_model():
         logger.error(traceback.format_exc())
 
 
-def conditionally_execute_trading():
+def conditionally_execute_trading(test=False):
     """
     根据是否为交易日决定是否执行交易策略。
     """
-    if is_trading_day():
+    if is_trading_day() or test:
         trading_with_fitted_model()
     else:
         logger.info("今天不是交易日，交易策略未执行。")

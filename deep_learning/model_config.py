@@ -56,7 +56,7 @@ class ModelParameters:
         # loss has not decreased by more than 1e-5 for 10 epochs
         early_stopper = EarlyStopping(
             monitor="val_loss",
-            patience=6,
+            patience=10,
             min_delta=1e-6,
             # min_delta=5,
             mode="min",

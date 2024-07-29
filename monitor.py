@@ -57,7 +57,7 @@ def add_jobs():
         download_history_data,
         'cron',
         day_of_week='mon-fri',  # 每个工作日运行
-        hour='9,13,17',
+        hour='9,13,15',
         minute=10,
         second=0,
         id='download_history_data'
@@ -89,8 +89,8 @@ def add_jobs():
         conditionally_execute_trading,
         'cron',
         day_of_week='mon-fri',  # 每个工作日运行
-        hour='9-14',
-        minute='20,50',  # 每个小时的20和50分钟运行
+        hour='14',
+        minute='58',  # 每个小时的20和50分钟运行
         second=0,
         id='conditionally_execute_trading'
     )
@@ -102,14 +102,14 @@ def remove_jobs():
 
 
 # 每天18:00结束所有作业
-scheduler.add_job(
-    remove_jobs,
-    'cron',
-    hour=18,
-    minute=0,
-    second=0,
-    id='remove_all_jobs'
-)
+# scheduler.add_job(
+#     remove_jobs,
+#     'cron',
+#     hour=16,
+#     minute=0,
+#     second=0,
+#     id='remove_all_jobs'
+# )
 
 # 每天08:00重新添加作业
 scheduler.add_job(
