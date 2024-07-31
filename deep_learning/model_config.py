@@ -2,8 +2,10 @@ import torch
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from darts.utils.callbacks import TFMProgressBar
 from torch.nn.modules.loss import MSELoss, CrossEntropyLoss
+from pathlib2 import Path
 
 
+work_dir = str(Path(__file__).parent.parent / "loggers/tsmixer_logs")
 class ModelParameters:
     """模型参数"""
 
@@ -19,7 +21,7 @@ class ModelParameters:
         self.output_chunk_length = output_chunk_length  # forecast/lookahead window
         self.batch_size = batch_size
         self.random_state = 42
-        self.work_dir = "./loggers/tsmixer_logs"
+        self.work_dir = work_dir
 
         # 第二个feed-forward层的隐藏层大小
         self.hidden_size = 64
