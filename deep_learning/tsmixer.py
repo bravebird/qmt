@@ -12,7 +12,6 @@ from loggers import logger
 from deep_learning.model_config import ModelParameters
 from utils.utils_general import is_trading_day
 
-
 def get_training_data(training_or_predicting='training'):
     # 1. 下载数据
     data = download_get_and_save_kline_date()
@@ -85,19 +84,29 @@ def get_training_data(training_or_predicting='training'):
     future_cov_ts = TimeSeries.from_dataframe(future_cov_df)
     future_cov_ts = future_cov_ts[start_index:]
     future_cov_ts = future_cov_ts.astype(np.float32)
+    path_scaler_train = str(Path(__file__).parent.parent / 'assets/runtime/scaler_train.pkl')
+    path_scaler_past = str(Path(__file__).parent.parent / 'assets/runtime/scaler_past.pkl')
     if training_or_predicting == 'training':
-        train = target_ts[ : -60]
-        val = target_ts[-80: ]
+        train = target_ts[: -60]
+        val = target_ts[-80:]
         # train, val = target_ts.split_after(0.92)
         scaler_train = Scaler(name='train').fit(train)
         scaler_past = Scaler(name='past').fit(past_cov_ts)
-        dump(scaler_train, open('./assets/runtime/scaler_train.pkl', 'wb'))
-        dump(scaler_past, open('./assets/runtime/scaler_past.pkl', 'wb'))
+        dump(scaler_train, open(path_scaler_train, 'wb'))
+        dump(scaler_past, open(path_scaler_past, 'wb'))
     elif training_or_predicting == 'predicting':
         train = target_ts
-        val = target_ts[-80: ]
-        scaler_train = load(open(Path(__file__).parent.parent / 'assets/runtime/scaler_train.pkl', 'rb'))
-        scaler_past = load(open(Path(__file__).parent.parent / 'assets/runtime/scaler_past.pkl', 'rb'))
+        val = target_ts[-80:]
+        try:
+            with open(path_scaler_train, 'rb') as f:
+                scaler_train = load(f)
+        except EOFError:
+            logger.error("Failed to load scaler_train: File is incomplete or corrupted.")
+        try:
+            with open(path_scaler_past, 'rb') as f:
+                scaler_past = load(f)
+        except EOFError:
+            logger.error("Failed to load scaler_past: File is incomplete or corrupted.")
     else:
         raise ValueError("training_or_predicting must be 'training' or 'predicting'")
 
@@ -113,7 +122,11 @@ def fit_tsmixer_model(test=False):
         logger.info("今天不是交易日")
         return False
 
-    train, val, past_cov_ts, future_cov_ts, scaler_train = get_training_data()
+    try:
+        train, val, past_cov_ts, future_cov_ts, scaler_train = get_training_data()
+    except Exception as e:
+        logger.error("Failed to get training data: {}".format(e))
+        return False
 
     # 5. 准备模型
     model = TSMixerModel(
@@ -134,8 +147,13 @@ def fit_tsmixer_model(test=False):
     )
 
     # 保存模型
-    model.save('./assets/models/tsmixer_model.pth.pkl')
+    model_path = Path(__file__).parent.parent / 'assets/models/tsmixer_model.pth.pkl'
+    model.save(str(model_path))
 
 
 if __name__ == '__main__':
-    fit_tsmixer_model()
+    logger.info("Starting training process...")
+    try:
+        fit_tsmixer_model()
+    except Exception as e:
+        logger.error("Training failed with exception: {}".format(e))

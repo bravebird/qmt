@@ -17,9 +17,10 @@ from utils.utils_general import is_trading_day
 # 初始化全局变量
 max_profit = {}
 positions = []
+max_profit_path = str(Path(__file__).parent.parent / 'assets/runtime/max_profit.pkl')
 
 
-def save_max_profit(max_profit_file ='./assets/runtime/max_profit.pkl'):
+def save_max_profit(max_profit_file=max_profit_path):
     """
     保存最大收益率字典到Pickle文件
     """
@@ -48,7 +49,7 @@ def save_max_profit(max_profit_file ='./assets/runtime/max_profit.pkl'):
         logger.error(f"Error saving max profit to Pickle file: {e}")
 
 
-def load_max_profit(max_profit_file ='./assets/runtime/max_profit.pkl'):
+def load_max_profit(max_profit_file=max_profit_path):
     """
     从Pickle文件加载最大收益率字典
     """
@@ -232,6 +233,3 @@ if __name__ == '__main__':
             logger.debug("finally-已经重启客户端，等待三秒。")
             time.sleep(3)
             continue
-
-
-
