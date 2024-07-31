@@ -4,11 +4,10 @@ import sys
 import time
 import traceback
 import math
-from datetime import datetime, timedelta
+from datetime import datetime
 from darts.models import TSMixerModel
 from xtquant import xtconstant
 from pathlib2 import Path
-import pandas as pd
 from apscheduler.executors.pool import ProcessPoolExecutor
 from apscheduler.schedulers.background import BackgroundScheduler
 from tzlocal import get_localzone
@@ -27,7 +26,6 @@ from utils.utils_data import get_max_ask_price
 from utils.utils_general import is_trading_day
 from trader.xt_acc import acc
 from trader.xt_trader import xt_trader
-from trader.xt_data import xt_data
 from loggers import logger
 
 

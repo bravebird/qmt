@@ -1,7 +1,5 @@
-import csv  # 用于读取CSV文件
 import pickle  # 用于序列化和反序列化Python对象
 import time  # 用于获取当前时间
-import os
 from multiprocessing import Manager
 from trader import xt_trader, acc, setup_xt_trader
 from xtquant import xtconstant
@@ -227,8 +225,6 @@ if __name__ == '__main__':
             logger.warning("重启mini迅投客户端。")
             logger.error(e)
             start_xt_client()
-            # signal.signal(signal.SIGALRM, handler)
-            # signal.alarm(20)
         finally:
             logger.debug("finally-已经重启客户端，等待三秒。")
             time.sleep(3)
