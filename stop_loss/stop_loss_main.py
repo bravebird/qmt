@@ -5,7 +5,6 @@ from trader import xt_trader, acc, setup_xt_trader
 from xtquant import xtconstant
 from xtquant import xtdata
 from pathlib2 import Path
-import importlib
 # 自定义模块
 from loggers import logger  # 日志记录器
 from utils.utils_data import get_targets_list_from_csv
