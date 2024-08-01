@@ -69,7 +69,7 @@ def add_jobs():
         'cron',
         day_of_week='mon-fri',  # 每个工作日运行
         hour='9-14',
-        second=20,
+        minute=20,
         id='stop_loss_main'
     )
 
