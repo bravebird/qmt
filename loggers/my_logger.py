@@ -4,11 +4,22 @@ from email.mime.text import MIMEText
 from loguru import logger
 from dotenv import load_dotenv
 import os
+import threading
 
 load_dotenv()  # 加载 .env 文件中的环境变量
 
 
 class LogManager:
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            with cls._lock:
+                if not cls._instance:
+                    cls._instance = super().__new__(cls, *args, **kwargs)
+        return cls._instance
+
     def __init__(
             self,
             mail_server="smtp.qq.com",
@@ -27,6 +38,9 @@ class LogManager:
             mail_password (str): 邮件发送密码 (或授权码).
             mail_receivers (str): 邮件接收地址，用英文逗号分隔的字符串.
         """
+        if hasattr(self, "_initialized") and self._initialized:
+            return  # 防止多次初始化
+
         self.mail_server = mail_server
         self.mail_port = mail_port
         self.mail_username = mail_username
@@ -53,13 +67,16 @@ class LogManager:
             format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{module}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
             level="DEBUG",
             colorize=True,
+            enqueue=True,
+            backtrace=True,
+            diagnose=True
         )
 
-        # 添加文件 처리器
+        # 添加文件处理器
         logger.add(
             log_file_path,
             format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {module}:{line} - {message}",
-            rotation="1 days",  # 每 5 分钟分割一次日志文件
+            rotation="1 days",  # 每 1 天分割一次日志文件
             retention="10 days",  # 保留10天的日志
             compression="zip",
             enqueue=True,
@@ -68,8 +85,22 @@ class LogManager:
         )
 
         # 添加拦截器
-        logger.add(self.error_interceptor, level=self.TRADER_LEVEL_NO, enqueue=True)
-        logger.add(self.error_interceptor, level="ERROR", enqueue=True)
+        logger.add(
+            self.error_interceptor,
+            level=self.TRADER_LEVEL_NO,
+            enqueue=True,
+            backtrace=True,
+            diagnose=True
+        )
+        logger.add(
+            self.error_interceptor,
+            level="ERROR",
+            enqueue=True,
+            backtrace=True,
+            diagnose=True
+        )
+
+        self._initialized = True
 
     def send_error_mail(self, record):
         """发送错误日志邮件."""
