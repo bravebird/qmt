@@ -73,16 +73,23 @@ def buy_stock_async(stocks, strategy_name='', order_remark=''):
             logger.info(f"{stock_code} 可买数量不足，现金：{cash}, 当前股价：{max_ask_price}")
             continue
 
-        response = xt_trader.order_stock_async(acc, stock_code, xtconstant.STOCK_BUY, quantity, order_type,
-                                               max_ask_price,
-                                               strategy_name, order_remark)
+        # response = xt_trader.order_stock_async(acc, stock_code, xtconstant.STOCK_BUY, quantity, order_type,
+        #                                        max_ask_price,
+        #                                        strategy_name, order_remark)
+        response = xt_trader.order_stock(
+            account=acc,
+            stock_code=stock_code,
+            order_type=xtconstant.STOCK_BUY,
+            order_volume=quantity,
+            price_type=order_type,
+            price=max_ask_price,
+            strategy_name=strategy_name,
+            order_remark=order_remark
+        )
         if response < 0:
-            logger.warning(f'【提交下单失败！】买入股票【{stock_code}】，数量【{quantity}】，返回值【{response}】')
+            logger.log("TRADER", f'【提交下单失败！】买入股票【{stock_code}】，数量【{quantity}】，返回值【{response}】')
         else:
-            logger.info(f'【提交下单成功！】买入股票【{stock_code}】，数量【{quantity}】，返回值【{response}】')
-
-    positions = xt_trader.query_stock_positions(acc)
-    logger.info("更新持仓信息完成")
+            logger.info("TRADER", f'【提交下单成功！】买入股票【{stock_code}】，数量【{quantity}】，返回值【{response}】')
 
 
 def trading_with_fitted_model():
@@ -110,6 +117,7 @@ def trading_with_fitted_model():
         logger.info(f"》》》》买入列表：{to_buy}")
 
         buy_stock_async(to_buy, strategy_name='tsmixer策略', order_remark='tsmixer策略买入。')
+
 
     except Exception as e:
         logger.error(f"交易执行过程中出现错误：{str(e)}")
