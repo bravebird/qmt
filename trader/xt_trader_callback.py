@@ -49,8 +49,7 @@ class MyXtQuantTraderCallback(XtQuantTraderCallback):
         :param trade: XtTrade对象
         :return:
         """
-        logger.log("TRADER",
-            f"股票成交回调: {trade.account_id}, 股票代码: {trade.stock_code}, 成交均价：{trade.traded_price}，成交数量:{trade.traded_volume}，委托ID: {trade.order_id}")
+        logger.trader(f"股票成交回调: {trade.account_id}, 股票代码: {trade.stock_code}, 成交均价：{trade.traded_price}，成交数量:{trade.traded_volume}，委托ID: {trade.order_id}")
 
     def on_stock_position(self, position):
         """
@@ -58,8 +57,7 @@ class MyXtQuantTraderCallback(XtQuantTraderCallback):
         :param position: XtPosition对象
         :return:
         """
-        logger.log(
-            "TRADER",
+        logger.logger(
             f"交易回调信息【持仓变动】: 证券代码:{position.stock_code};持仓数量:{position.volume}; 可用数量:{position.can_use_volume}; 冻结数量:{position.frozen_volume}; 成本价格：:{position.avg_price}"
         )
 

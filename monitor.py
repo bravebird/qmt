@@ -10,6 +10,7 @@ from stop_loss.stop_loss_main import stop_loss_main
 from deep_learning.tsmixer import fit_tsmixer_model
 from deep_learning.monitor_buy import conditionally_execute_trading
 from mini_xtclient.mini_xt import start_miniqmt
+from trader.reporter import generate_trading_report
 from loggers import logger
 
 # pre_00: 调度器设置
@@ -93,6 +94,17 @@ def add_jobs():
         minute='58',  # 每个小时的20和50分钟运行
         second=0,
         id='conditionally_execute_trading'
+    )
+
+    # 交易报告
+    scheduler.add_job(
+        generate_trading_report,
+        'cron',
+        day_of_week='mon-fri',  # 每个工作日运行
+        hour='15',
+        minute='15',
+        second=0,
+        id='generate_trading_report'
     )
 
 

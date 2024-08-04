@@ -146,6 +146,9 @@ def fit_tsmixer_model(test=False):
         val_future_covariates=future_cov_ts,
     )
 
+    # 加载最优模型
+    model = model.load_from_checkpoint(model_name='tsm', work_dir=ModelParameters().work_dir)
+
     # 保存模型
     model_path = Path(__file__).parent.parent / 'assets/models/tsmixer_model.pth.pkl'
     model.save(str(model_path))

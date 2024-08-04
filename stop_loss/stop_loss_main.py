@@ -84,7 +84,7 @@ def sell_stock(stock_code, quantity, price=0, strategy_name='', order_remark='')
     response = xt_trader.order_stock_async(acc, stock_code, xtconstant.STOCK_SELL, quantity, order_type, price,
                                            strategy_name,
                                            order_remark)
-    logger.log("TRADER", f'卖出股票【{stock_code}】，数量【{quantity}】，返回值为【 {response}】')
+    logger.trader(f'卖出股票【{stock_code}】，数量【{quantity}】，返回值为【 {response}】')
     # 更新持仓信息
     positions = xt_trader.query_stock_positions(acc)
 
@@ -105,7 +105,7 @@ def abs_stop_loss(datas):
             if avg_price != 0:
                 profit_rate = (last_price - avg_price) / avg_price
 
-                if profit_rate <= -0.01:
+                if profit_rate <= -0.008:
                     sell_stock(stock_code, volume, 0, "止损策略", "收益率为-1%")  # 卖出可用数量
 
 

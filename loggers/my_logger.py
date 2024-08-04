@@ -1,10 +1,13 @@
 import sys
 import smtplib
 from email.mime.text import MIMEText
-from loguru import logger
+import logging
+from logging.handlers import SMTPHandler
+from concurrent_log_handler import ConcurrentRotatingFileHandler
 from dotenv import load_dotenv
 import os
 import threading
+import colorlog
 
 load_dotenv()  # 加载 .env 文件中的环境变量
 
@@ -12,6 +15,10 @@ load_dotenv()  # 加载 .env 文件中的环境变量
 class LogManager:
     _instance = None
     _lock = threading.Lock()
+
+    # 自定义日志级别
+    TRADER_LEVEL_NO = 35
+    logging.addLevelName(TRADER_LEVEL_NO, "TRADER")
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -47,102 +54,118 @@ class LogManager:
         self.mail_password = mail_password
         self.mail_receivers = [email.strip() for email in mail_receivers.split(",")]
 
-        # 获取脚本文件所在的目录
+        # 初始化日志记录器
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.DEBUG)
+
+        # 创建安全的文件处理器
         script_dir = os.path.dirname(os.path.abspath(__file__))
         log_file_path = os.path.join(script_dir, "logs/app.log")
-
-        # 确保日志文件夹存在
         os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
-
-        # 自定义日志级别 TRADER
-        self.TRADER_LEVEL_NO = 36
-        logger.level("TRADER", no=self.TRADER_LEVEL_NO, color="<red>", icon="🔥")
-
-        # 配置 Loguru
-        logger.remove()
+        file_handler = ConcurrentRotatingFileHandler(log_file_path, "a", 512 * 1024, 10)
+        file_formatter = logging.Formatter('%(asctime)s | %(levelname)-8s | %(module)s:%(lineno)d - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+        file_handler.setFormatter(file_formatter)
 
         # 添加控制台处理器
-        logger.add(
-            sys.stderr,
-            format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{module}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-            level="DEBUG",
-            colorize=True,
-            enqueue=True,
-            backtrace=True,
-            diagnose=True
+        console_handler = logging.StreamHandler()
+        console_formatter = colorlog.ColoredFormatter(
+            "%(log_color)s%(asctime)s | %(levelname)-8s | %(module)s:%(lineno)d - %(message)s",
+            datefmt='%Y-%m-%d %H:%M:%S',
+            log_colors={
+                'DEBUG': 'cyan',
+                'INFO': 'green',
+                'WARNING': 'yellow',
+                'ERROR': 'red',
+                'CRITICAL': 'bold_red',
+                'TRADER': 'purple',  # 用于自定义日志级别
+            }
         )
+        console_handler.setFormatter(console_formatter)
+        console_handler.setLevel(logging.DEBUG)
 
-        # 添加文件处理器
-        logger.add(
-            log_file_path,
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {module}:{line} - {message}",
-            rotation="1 days",  # 每 1 天分割一次日志文件
-            retention="10 days",  # 保留10天的日志
-            compression="zip",
-            enqueue=True,
-            backtrace=True,
-            diagnose=True
+        # 添加邮件处理器
+        smtp_handler = SMTPHandler(
+            mailhost=(mail_server, mail_port),
+            fromaddr=mail_username,
+            toaddrs=self.mail_receivers,
+            subject='量化交易日志提醒',
+            credentials=(mail_username, mail_password),
+            secure=()
         )
+        email_formatter = logging.Formatter('%(asctime)s | %(levelname)-8s | %(message)s\nModule: %(module)s\nLine: %(lineno)d', datefmt='%Y-%m-%d %H:%M:%S')
+        smtp_handler.setFormatter(email_formatter)
+        smtp_handler.setLevel(logging.ERROR)
 
-        # 添加拦截器
-        logger.add(
-            self.error_interceptor,
-            level=self.TRADER_LEVEL_NO,
-            enqueue=True,
-            backtrace=True,
-            diagnose=True
+        # 添加TRADER邮件处理器
+        trader_mail_handler = TraderMailHandler(
+            mailhost=(mail_server, mail_port),
+            fromaddr=mail_username,
+            toaddrs=self.mail_receivers,
+            subject='TRADER级别日志提醒',
+            credentials=(mail_username, mail_password),
+            secure=()
         )
-        logger.add(
-            self.error_interceptor,
-            level="ERROR",
-            enqueue=True,
-            backtrace=True,
-            diagnose=True
-        )
+        trader_mail_handler.setFormatter(email_formatter)
+        trader_mail_handler.setLevel(LogManager.TRADER_LEVEL_NO)
+
+        # 添加处理器到logger
+        self.logger.addHandler(file_handler)
+        self.logger.addHandler(console_handler)
+        self.logger.addHandler(smtp_handler)
+        self.logger.addHandler(trader_mail_handler)
 
         self._initialized = True
 
-    def send_error_mail(self, record):
-        """发送错误日志邮件."""
+    def get_logger(self):
+        return self.logger
+
+class TraderMailHandler(SMTPHandler):
+    def emit(self, record):
+        """
+        Emit a record.
+
+        Send the record to the specified email addresses.
+        """
         try:
-            level = record["level"].name
-            record_str = str(record)
-
-            msg = MIMEText(record_str, "plain", "utf-8")
-            msg["Subject"] = f"量化交易日志提醒 [{level}]"
-            msg["From"] = self.mail_username
-            msg["To"] = ", ".join(self.mail_receivers)
-
-            try:
-                with smtplib.SMTP_SSL(host=self.mail_server, port=self.mail_port, timeout=10) as server:
-                    # server.set_debuglevel(1)
-                    server.login(self.mail_username, self.mail_password)
-                    server.sendmail(self.mail_username, self.mail_receivers, msg.as_string())
-
-                print("错误邮件发送成功")
-            except Exception as e:
-                print(f"发送邮件失败: {e}")
-        except Exception as e:
-            print(f"处理日志记录时发生错误: {e}")
-
-    def error_interceptor(self, message):
-        """拦截 TRADER 和 ERROR 级别的日志并发送邮件。"""
-        self.send_error_mail(message.record)
+            # Format the record and get the message
+            msg = self.format(record)
+            # Create email
+            email_msg = MIMEText(msg, _subtype='plain', _charset='utf-8')
+            email_msg['Subject'] = self.getSubject(record)
+            email_msg['From'] = self.fromaddr
+            email_msg['To'] = ','.join(self.toaddrs)
+            # Establish a secured connection and send email
+            smtp = smtplib.SMTP_SSL(self.mailhost, self.mailport)
+            smtp.login(self.username, self.password)
+            smtp.sendmail(self.fromaddr, self.toaddrs, email_msg.as_string())
+            smtp.quit()
+        except Exception:
+            self.handleError(record)
 
 
-# 使用示例:
+def log_trader(self, message, *args, **kws):
+    if self.isEnabledFor(LogManager.TRADER_LEVEL_NO):
+        self._log(LogManager.TRADER_LEVEL_NO, message, args, **kws)
+
+logging.Logger.trader = log_trader
+
+
+# 使用示例
 if __name__ == "__main__":
     # 初始化 LogManager (根据需要修改配置)
     log_manager = LogManager()
+    logger = log_manager.get_logger()
 
     # 使用 logger 对象记录日志
-    logger.debug("这是一条调试信息")
-    logger.info("这是一条信息")
-    logger.warning("这是一条警告信息")
-    logger.error("这是一条错误信息")
-    logger.log("TRADER", "这是一条 TRADER 级别的信息")  # 使用自定义级别
-
     try:
+        logger.debug("这是一条调试信息")
+        logger.info("这是一条信息")
+        logger.warning("这是一条警告信息")
+        logger.error("这是一条错误信息")
+        logger.trader("这是一条 TRADER 级别的信息")  # 使用自定义级别
+
         1 / 0
     except ZeroDivisionError:
         logger.exception("捕获到异常")
+    except Exception as e:
+        print(f"记录日志时发生错误: {e}")
