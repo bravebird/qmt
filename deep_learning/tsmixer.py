@@ -7,14 +7,14 @@ from xtquant import xtdata
 from pathlib2 import Path
 from pickle import dump, load
 # 自定义部分
-from data.xt_data_download import download_get_and_save_kline_date
+from data.xt_data_download import download_and_save_xt_date
 from loggers import logger
 from deep_learning.model_config import ModelParameters
 from utils.utils_general import is_trading_day
 
 def get_training_data(training_or_predicting='training'):
     # 1. 下载数据
-    data = download_get_and_save_kline_date()
+    data = download_and_save_xt_date()
 
     # 2. 清洗数据
     def group_clean_data(df):

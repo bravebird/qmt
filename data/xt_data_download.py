@@ -6,6 +6,7 @@ from pathlib2 import Path
 from utils.utils_data import get_targets_list_from_csv  # 获取股票列表
 from loggers import logger
 
+
 def download_stock_data(period='1d', start_time=None, end_time=None, callback=None):
     """
     从 CSV 文件获取股票列表并下载历史数据。
@@ -28,6 +29,7 @@ def download_stock_data(period='1d', start_time=None, end_time=None, callback=No
             logger.info(f"成功下载股票数据：{stock}")
         except Exception as e:
             logger.error(f"下载股票数据失败：{stock}，错误信息：{e}")
+
 
 def get_stock_data_as_dataframe(period='1d', start_time=None, end_time=None):
     """
@@ -67,6 +69,7 @@ def get_stock_data_as_dataframe(period='1d', start_time=None, end_time=None):
         logger.error(f"获取股票数据失败，错误信息：{e}")
         return pd.DataFrame()  # 返回空的 DataFrame 以防止后续代码崩溃
 
+
 def save_data_to_csv(df, filename):
     """
     将数据保存到CSV文件中。
@@ -80,13 +83,13 @@ def save_data_to_csv(df, filename):
     except Exception as e:
         logger.error(f"保存数据失败，错误信息：{e}")
 
-def download_get_and_save_kline_date(period='1d', start_time=None, end_time=None, callback=None):
+
+def download_and_save_xt_date(period='1d', start_time=None, end_time=None, callback=None):
     download_stock_data(period=period, start_time=start_time, end_time=end_time, callback=callback)
     combined_df = get_stock_data_as_dataframe(period=period, start_time=start_time, end_time=end_time)
 
     if not combined_df.empty:
         logger.info("Combined data:")
-        logger.info(combined_df.tail())
 
         now = datetime.now().strftime('%Y%m%d%H%M%S')
         filename = Path(__file__).parent.parent / f'assets/data/combined_{period}_data_{now}.csv'
@@ -95,17 +98,18 @@ def download_get_and_save_kline_date(period='1d', start_time=None, end_time=None
         logger.warning("未获取到任何数据，未保存到 CSV 文件。")
     return combined_df
 
+
 if __name__ == '__main__':
     import schedule
     import time
 
     today = datetime.now().date()
 
-    schedule.every().day.at("10:00").do(download_get_and_save_kline_date)
-    schedule.every().day.at("11:00").do(download_get_and_save_kline_date)
-    schedule.every().day.at("11:29").do(download_get_and_save_kline_date)
+    schedule.every().day.at("10:00").do(download_and_save_xt_date)
+    schedule.every().day.at("11:00").do(download_and_save_xt_date)
+    schedule.every().day.at("11:29").do(download_and_save_xt_date)
 
-    download_get_and_save_kline_date()
+    download_and_save_xt_date()
 
     while True:
         if datetime.now().date() != today:
