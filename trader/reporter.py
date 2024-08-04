@@ -34,7 +34,7 @@ def generate_trading_report():
 
     report += "=" * 20
 
-    report += "\n当日成交记录:\n"
+    report += "\n当日成交:\n"
     for trade in trades:
         report += f"    股票代码: {trade.stock_code}， 成交金额: {trade.traded_amount}， 成交数量: {trade.traded_volume}， 成交价格: {trade.traded_price}， 成交时间: {trade.traded_time}\n"
 
