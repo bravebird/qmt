@@ -7,6 +7,8 @@ from loggers import logger
 xt_trader.subscribe(acc)
 
 def generate_trading_report():
+    order_type_dic = {23: "买入", 24: "卖出"}
+
     today = datetime.now().strftime("%Y-%m-%d")
 
     # 查询资产
@@ -37,7 +39,8 @@ def generate_trading_report():
     report += "\n当日成交:\n"
     for trade in trades:
         traded_time = datetime.fromtimestamp(trade.traded_time)
-        report += f"    股票代码: {trade.stock_code}， 成交金额: {trade.traded_amount}， 成交数量: {trade.traded_volume}， 成交价格: {trade.traded_price}， 成交时间: {traded_time}\n"
+        order_type = order_type_dic.get(trade.order_type, '未定义')
+        report += f"    【{order_type}】股票代码: {trade.stock_code}， 成交金额: {trade.traded_amount}， 成交数量: {trade.traded_volume}， 成交价格: {trade.traded_price}， 成交时间: {traded_time}\n"
 
     report += "=" * 20
 
