@@ -1,6 +1,7 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ProcessPoolExecutor
 from apscheduler.jobstores.memory import MemoryJobStore
+from datetime import datetime
 import time
 
 # 自定义的调度对象
@@ -34,6 +35,7 @@ scheduler = BackgroundScheduler(jobstores=jobstores, executors=executors, job_de
 
 # 添加作业函数
 def add_jobs():
+    now = datetime.now()
     if not is_trading_day():
         logger.info("今天不是交易日，程序放假。")
         return False
@@ -50,7 +52,8 @@ def add_jobs():
         hour='9-17',
         minute=0,
         second=0,
-        id='start_miniqmt'
+        id='start_miniqmt',
+        next_run_time=now
     )
 
     # 定时下载数据
@@ -71,7 +74,8 @@ def add_jobs():
         day_of_week='mon-fri',  # 每个工作日运行
         hour='9-14',
         minute=20,
-        id='stop_loss_main'
+        id='stop_loss_main',
+        next_run_time=now
     )
 
     # 训练模型
@@ -104,7 +108,8 @@ def add_jobs():
         hour='15',
         minute='15',
         second=0,
-        id='generate_trading_report'
+        id='generate_trading_report',
+        next_run_time=now
     )
 
 
