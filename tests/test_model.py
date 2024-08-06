@@ -37,7 +37,7 @@ def test_predicting():
 
 def test_buy_stock_async():
     from deep_learning.monitor_buy import buy_stock_async
-    result = buy_stock_async(['601838.SH'])
+    result = buy_stock_async(['601838.SH','512290.SH'])
     # assert result is not None, "Stock buying result should not be None"
 
 
