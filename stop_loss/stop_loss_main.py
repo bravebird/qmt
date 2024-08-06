@@ -109,7 +109,7 @@ def abs_stop_loss(datas):
                 profit_rate = (last_price - avg_price) / avg_price
 
                 if profit_rate <= -0.008:
-                    sell_stock(stock_code, volume, 0, "止损策略", "收益率为-1%")  # 卖出可用数量
+                    sell_stock(stock_code, volume, 0, "亏损1%", "收益率为-1%")  # 卖出可用数量
 
 
 def stop_loss_max_profit(datas):
@@ -138,7 +138,7 @@ def stop_loss_max_profit(datas):
 
                 # 判断回撤止损条件
                 if max_profit[stock_code] > 0.005 and current_profit <= max_profit[stock_code] * 0.5:
-                    sell_stock(stock_code, volume, 0, "止盈回撤策略", f"最大盈利超过0.5%，当前回撤至{current_profit}")
+                    sell_stock(stock_code, volume, 0, "回撤50%", f"最大盈利超过0.5%，当前回撤至{current_profit}")
 
 
 def stop_loss_large_profit(datas):
@@ -167,7 +167,7 @@ def stop_loss_large_profit(datas):
 
                 # 判断回撤止损条件
                 if max_profit[stock_code] > 0.20 and current_profit <= max_profit[stock_code] - 0.10:
-                    sell_stock(stock_code, volume, 0, "高盈利回撤策略", f"最大盈利超过20%，当前回撤至{current_profit}")
+                    sell_stock(stock_code, volume, 0, "回撤10个百分点", f"最大盈利超过20%，当前回撤至{current_profit}")
 
 
 def call_back_functions(data, last_update_time):

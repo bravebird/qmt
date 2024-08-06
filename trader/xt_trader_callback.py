@@ -4,6 +4,7 @@ from xtquant.xttype import StockAccount
 from xtquant import xtconstant
 from pathlib import Path
 from dotenv import load_dotenv
+from datetime import datetime
 import os
 import time
 # 自定义包
@@ -51,7 +52,8 @@ class MyXtQuantTraderCallback(XtQuantTraderCallback):
         :return:
         """
         order_type = order_type_dic.get(trade.order_type, '未定义')
-        logger.trader(f"股票成交【{order_type}】: {trade.account_id}, 股票代码: {trade.stock_code}, 成交均价：{trade.traded_price}，成交数量:{trade.traded_volume}，委托ID: {trade.order_id}")
+        traded_time = datetime.fromtimestamp(trade.traded_time)
+        logger.trader(f"【{order_type}-{trade.strategy_name}】股票代码: {trade.stock_code}， 成交金额: {trade.traded_amount}， 成交数量: {trade.traded_volume}， 成交价格: {trade.traded_price}， 成交时间: {traded_time}， 备注：{trade.order_remark}")
 
     def on_stock_position(self, position):
         """
