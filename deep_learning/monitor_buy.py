@@ -36,8 +36,19 @@ def buy_stock_async(stocks, strategy_name='', order_remark=''):
     """
     买入股票函数：根据股票代码后缀确定所属市场并设置 order_type 后，异步发出买入指令。
     """
-    if len(stocks) > MAX_POSITIONS:
-        stocks = stocks[:MAX_POSITIONS]
+
+    asset = xt_trader.query_stock_asset(acc)
+    cash = asset.cash
+    positions = xt_trader.query_stock_positions(acc)
+    position_list = [pos.stock_code for pos in positions if pos.volume > 0]
+    position_count = len(position_list)
+    available_slots = max(MAX_POSITIONS - position_count, 0)
+    if available_slots == 0:
+        logger.info(f"当前持仓已满:{position_list}。")
+        return False
+
+    if len(stocks) > available_slots:
+        stocks = stocks[:available_slots]
 
     for stock_code in stocks:
         if stock_code.endswith('.SH') or stock_code.endswith('.SZ'):
@@ -47,17 +58,6 @@ def buy_stock_async(stocks, strategy_name='', order_remark=''):
 
         logger.info(f"股票【{stock_code}】报价类型为：{order_type}")
 
-        asset = xt_trader.query_stock_asset(acc)
-        positions = xt_trader.query_stock_positions(acc)
-        position_list = [pos.stock_code for pos in positions if pos.volume > 0]
-        position_count = len(position_list)
-        available_slots = max(MAX_POSITIONS - position_count, 0)
-
-        if available_slots == 0:
-            logger.info(f"当前持仓已满:{position_list}。")
-            continue
-
-        cash = asset.cash
         max_ask_price = get_max_ask_price(stock_code)
 
         if not max_ask_price:
@@ -69,7 +69,7 @@ def buy_stock_async(stocks, strategy_name='', order_remark=''):
             continue
 
         quantity = math.floor(cash / max_ask_price / available_slots / 100) * 100
-        if quantity <= 100:
+        if quantity < 100:
             logger.info(f"{stock_code} 可买数量不足，现金：{cash}, 当前股价：{max_ask_price}")
             continue
 
