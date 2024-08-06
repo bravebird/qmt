@@ -87,9 +87,9 @@ def buy_stock_async(stocks, strategy_name='', order_remark=''):
             order_remark=order_remark
         )
         if response < 0:
-            logger.trader(f'\n【提交下单失败！-{strategy_name}】\n 买入股票【{stock_code}】，\n数量【{quantity}】，\n单价【{max_ask_price}】，\n金额【{quantity*max_ask_price}】，\n返回值【{response}】')
+            logger.trader(f'\n【提交下单失败！- 买入 - {strategy_name}】\n 股票【{stock_code}】，\n数量【{quantity}】，\n单价【{max_ask_price}】，\n金额【{quantity*max_ask_price}】，\n返回值【{response}】')
         else:
-            logger.trader(f'\n【提交下单成功！-{strategy_name}】\n 买入股票【{stock_code}】，\n数量【{quantity}】，\n单价【{max_ask_price}】，\n金额【{quantity*max_ask_price}】，\n返回值【{response}】')
+            logger.trader(f'\n【提交下单成功！- 买入 - {strategy_name}】\n 股票【{stock_code}】，\n数量【{quantity}】，\n单价【{max_ask_price}】，\n金额【{quantity*max_ask_price}】，\n返回值【{response}】')
 
 
 def trading_with_fitted_model():
