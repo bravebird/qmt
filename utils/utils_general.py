@@ -33,3 +33,16 @@ def is_trading_day():
     future_date = (datetime.now() + timedelta(days=1)).strftime("%Y%m%d")
     calendar = xtdata.get_trading_calendar("SH", start_time=today, end_time=future_date)
     return any(today == str(date) for date in calendar)
+
+def is_transaction_hour():
+    """
+    判断当前时间是否为交易时间
+    :return:
+    """
+    today = datetime.now()
+    morning_start = today.replace(hour=9, minute=30, second=0, microsecond=0)
+    morning_end = today.replace(hour=11, minute=30, second=0, microsecond=0)
+    afternoon_start = today.replace(hour=13, minute=0, second=0, microsecond=0)
+    afternoon_end = today.replace(hour=15, minute=0, second=0, microsecond=0)
+    return (morning_start <= today <= morning_end) \
+        or (afternoon_start <= today <= afternoon_end)

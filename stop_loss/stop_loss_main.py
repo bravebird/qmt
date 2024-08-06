@@ -9,7 +9,7 @@ from pathlib2 import Path
 from loggers import logger  # 日志记录器
 from utils.utils_data import get_targets_list_from_csv
 from utils.utils_xtclient import start_xt_client
-from utils.utils_general import is_trading_day
+from utils.utils_general import is_trading_day, is_transaction_hour
 
 # 初始化全局变量
 max_profit = {}
@@ -174,6 +174,11 @@ def call_back_functions(data, last_update_time):
     """
     数据回调函数，每次数据更新时调用，用于执行止损逻辑。
     """
+
+    if not is_transaction_hour():
+        # logger.info("不在交易时间内")
+        return False
+
     global positions  # 声明使用全局变量 positions
     # positions = xt_trader.query_stock_positions(acc)
     current_time = time.time()

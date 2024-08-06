@@ -11,6 +11,7 @@ from loggers import logger
 from config import config
 from mini_xtclient.mini_xt import ProgramMonitor
 from utils.utils_general import generate_session_id
+from config.data_dic import order_type_dic
 # from utils.utils_xtclient import start_xt_client
 
 
@@ -49,7 +50,8 @@ class MyXtQuantTraderCallback(XtQuantTraderCallback):
         :param trade: XtTrade对象
         :return:
         """
-        logger.trader(f"股票成交回调: {trade.account_id}, 股票代码: {trade.stock_code}, 成交均价：{trade.traded_price}，成交数量:{trade.traded_volume}，委托ID: {trade.order_id}")
+        order_type = order_type_dic.get(trade.order_type, '未定义')
+        logger.trader(f"股票成交【{order_type}】: {trade.account_id}, 股票代码: {trade.stock_code}, 成交均价：{trade.traded_price}，成交数量:{trade.traded_volume}，委托ID: {trade.order_id}")
 
     def on_stock_position(self, position):
         """

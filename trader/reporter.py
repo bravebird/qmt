@@ -3,11 +3,12 @@ from datetime import datetime
 from trader.xt_acc import acc
 from trader.xt_trader import xt_trader
 from loggers import logger
+from config.data_dic import order_type_dic
 
 xt_trader.subscribe(acc)
 
 def generate_trading_report():
-    order_type_dic = {23: "买入", 24: "卖出"}
+    # order_type_dic = {23: "买入", 24: "卖出"}
 
     today = datetime.now().strftime("%Y-%m-%d")
 
