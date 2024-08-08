@@ -53,7 +53,7 @@ class MyXtQuantTraderCallback(XtQuantTraderCallback):
         """
         order_type = order_type_dic.get(trade.order_type, '未定义')
         traded_time = datetime.fromtimestamp(trade.traded_time)
-        logger.trader(f"【{order_type}-{trade.strategy_name}】股票代码: {trade.stock_code}， 成交金额: {trade.traded_amount}， 成交数量: {trade.traded_volume}， 成交价格: {trade.traded_price}， 成交时间: {traded_time}， 备注：{trade.order_remark}")
+        logger.trader(f"【{order_type}-{trade.strategy_name}】\n股票代码: {trade.stock_code}， \n成交金额: {trade.traded_amount}， \n成交数量: {trade.traded_volume}， \n成交价格: {trade.traded_price}， \n成交时间: {traded_time}， \n备注：{trade.order_remark}")
 
     def on_stock_position(self, position):
         """

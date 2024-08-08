@@ -58,7 +58,11 @@ def buy_stock_async(stocks, strategy_name='', order_remark=''):
 
         logger.info(f"股票【{stock_code}】报价类型为：{order_type}")
 
-        max_ask_price = get_max_ask_price(stock_code)
+        # 读取两次,取最高要价
+        price1 = get_max_ask_price(stock_code)
+        time.sleep(2)
+        price2 = get_max_ask_price(stock_code)
+        max_ask_price = max(price1, price2)
 
         if not max_ask_price:
             logger.warning(f"未能获得股票数据：{stock_code}")

@@ -40,6 +40,10 @@ def test_buy_stock_async():
     result = buy_stock_async(['601838.SH','512290.SH'])
     # assert result is not None, "Stock buying result should not be None"
 
+def test_get_tick_price():
+    from utils.utils_data import get_max_ask_price
+    get_max_ask_price("159869.SZ")
+
 
 if __name__ == '__main__':
     os.getcwd()
