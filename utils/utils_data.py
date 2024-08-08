@@ -41,6 +41,10 @@ def get_max_ask_price(stock_code):
         if stock_code in data and bool(data[stock_code]):
             time = data[stock_code]['timetag']
             max_ask_price = max(max(data[stock_code]['askPrice']), max(data[stock_code]['bidPrice']))
+            max_ask_price = max(max_ask_price, data[stock_code]['high'])
+            logger.info(data[stock_code]['high'])
+            logger.info(data[stock_code]['askPrice'])
+            logger.info(data[stock_code]['bidPrice'])
             logger.info(f"股票:{stock_code}; 时间:{time}; 价格:{max_ask_price}")
             return max_ask_price
         else:

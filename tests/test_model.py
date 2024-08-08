@@ -42,7 +42,8 @@ def test_buy_stock_async():
 
 def test_get_tick_price():
     from utils.utils_data import get_max_ask_price
-    get_max_ask_price("159869.SZ")
+    for stock in ["159869.SZ", "588120.SH"]:
+        get_max_ask_price(stock)
 
 
 if __name__ == '__main__':
