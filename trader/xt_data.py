@@ -1,6 +1,7 @@
-from xtquant import xtdata as xt_data
+from xtquant import xtdata
+import time
 
-xt_data.connect()
+xt_data = xtdata
 
 if __name__ == '__main__':
     code_list = ["000001.SZ"]
@@ -27,11 +28,15 @@ if __name__ == '__main__':
 
     # 订阅全推行情
     print("*" * 20)
+
+
     def on_data(datas):
         print("打印全推数据")
         print(datas)
         # for stock_code in datas:
         #     print(stock_code, datas[stock_code])
+
+
     print("订阅全推数据")
     xt_data.subscribe_whole_quote(code_list, callback=on_data)
     print("获取全推数据")

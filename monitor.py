@@ -12,6 +12,7 @@ from deep_learning.tsmixer import fit_tsmixer_model
 from deep_learning.monitor_buy import conditionally_execute_trading
 from mini_xtclient.mini_xt import start_miniqmt
 from trader.reporter import generate_trading_report
+from utils.utils_data import subscribe_real_data
 from loggers import logger
 
 # pre_00: 调度器设置
@@ -44,7 +45,7 @@ def add_jobs():
         logger.info("作业已经存在，不重复添加作业。")
         return True
 
-    # 启动
+    # 启动客户端
     scheduler.add_job(
         start_miniqmt,
         'cron',
@@ -65,6 +66,17 @@ def add_jobs():
         minute=10,
         second=0,
         id='download_history_data'
+    )
+
+    # 订阅行情数据
+    scheduler.add_job(
+        subscribe_real_data,
+        'cron',
+        day_of_week='mon-fri',  # 每个工作日运行
+        hour='9',
+        minute=29,
+        second=0,
+        id='subscribe_real_data'
     )
 
     # 止损
@@ -106,7 +118,7 @@ def add_jobs():
         'cron',
         day_of_week='mon-fri',  # 每个工作日运行
         hour='15',
-        minute='15',
+        minute='5',
         second=0,
         id='generate_trading_report',
         next_run_time=now

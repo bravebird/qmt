@@ -2,6 +2,7 @@ import csv
 from xtquant import xtdata
 from datetime import datetime
 from pathlib import Path
+import time
 # 自定义
 from config import config
 from loggers import logger
@@ -59,14 +60,44 @@ def on_subscribe_data(datas):
     for stock_code in datas:
         print(stock_code, datas[stock_code])
 
-def subscribe_real_data():
-    if not is_trading_day():
+def subscribe_whole_real_data(test = False):
+    """订阅全推行情数据"""
+    if not(is_trading_day or test):
+        logger.info("今天不是交易日")
+        return False
+    res = xtdata.connect()
+    xtdata.subscribe_whole_quote(["SH", "SZ"])
+    logger.info(f"订阅实时行情:{res}")
+    xtdata.run()
+    return xtdata
+
+def subscribe_real_data(period='1d', test = False):
+    """订阅全推行情数据"""
+    if not(is_trading_day or test):
         logger.info("今天不是交易日")
         return False
     res = xtdata.connect()
     stock_list = get_targets_list_from_csv()
-    xtdata.subscribe_whole_quote(stock_list)
-    logger.info(f"订阅全推行情:{res}")
+    # 向服务器订阅数据
+    for stock in stock_list:
+        xtdata.subscribe_quote(stock, period=period, count=-1)  # 设置count = -1来取到当天所有实时行情
+        logger.info(f"订阅全推行情:{stock}")
+    xtdata.run()
+
+
+def unsubscribe_real_data(period='1d', test = False):
+    """订阅全推行情数据"""
+    if not(is_trading_day or test):
+        logger.info("今天不是交易日")
+        return False
+    res = xtdata.connect()
+    stock_list = get_targets_list_from_csv()
+    # 向服务器订阅数据
+    for stock in stock_list:
+        xtdata.unsubscribe_quote(stock, period=period, count=-1)  # 设置count = -1来取到当天所有实时行情
+        logger.info(f"取消订阅全推行情:{stock}")
+    # print(stock_list)
+    # xtdata.subscribe_quote(stock_list)
     xtdata.run()
 
 
@@ -94,12 +125,15 @@ def download_history_data(period='1d', start_time=None, end_time=None,):
         end_time = datetime.now().strftime('%Y%m%d%H%M%S')
 
     # 调用 xtdata.download_history_data2 方法下载历史数据
-    for stock in stock_list:
-        xtdata.download_history_data(stock, period, start_time, end_time)
+    # for stock in stock_list:
+    #     xtdata.download_history_data(stock, period, start_time, end_time)
     logger.info("数据下载完成。")
 
 
+
+
+
 if __name__ == '__main__':
-    subscribe_real_data()
+    subscribe_real_data(test=False)
     # get_max_ask_price("000001.SZ")
 
