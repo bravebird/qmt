@@ -69,15 +69,15 @@ def add_jobs():
     )
 
     # 订阅行情数据
-    scheduler.add_job(
-        subscribe_real_data,
-        'cron',
-        day_of_week='mon-fri',  # 每个工作日运行
-        hour='9',
-        minute=29,
-        second=0,
-        id='subscribe_real_data'
-    )
+    # scheduler.add_job(
+    #     subscribe_real_data,
+    #     'cron',
+    #     day_of_week='mon-fri',  # 每个工作日运行
+    #     hour='9',
+    #     minute=29,
+    #     second=0,
+    #     id='subscribe_real_data'
+    # )
 
     # 止损
     scheduler.add_job(

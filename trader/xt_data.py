@@ -29,7 +29,6 @@ if __name__ == '__main__':
     # 订阅全推行情
     print("*" * 20)
 
-
     def on_data(datas):
         print("打印全推数据")
         print(datas)

@@ -3,32 +3,10 @@ import xtquant.xtdata as xtdata
 from datetime import datetime
 import pandas as pd
 from pathlib2 import Path
+# 自定义
 from utils.utils_data import get_targets_list_from_csv  # 获取股票列表
 from loggers import logger
-
-
-def download_stock_data(period='1d', start_time=None, end_time=None, callback=None):
-    """
-    从 CSV 文件获取股票列表并下载历史数据。
-
-    :param period: 时间周期，默认 '1d'
-    :param start_time: 起始时间，格式为 'YYYYMMDD'，默认 '20200101'
-    :param end_time: 结束时间，格式为 'YYYYMMDD'，默认当前日期
-    :param callback: 下载数据时的回调函数，默认 None
-    """
-    stock_list = get_targets_list_from_csv()
-
-    if start_time is None:
-        start_time = '20200101'
-    if end_time is None:
-        end_time = datetime.now().strftime('%Y%m%d%H%M%S')
-
-    for stock in stock_list:
-        try:
-            xtdata.download_history_data(stock, period, start_time, end_time, incrementally=True)
-            logger.info(f"成功下载股票数据：{stock}")
-        except Exception as e:
-            logger.error(f"下载股票数据失败：{stock}，错误信息：{e}")
+from utils.utils_data import download_history_data
 
 
 def get_stock_data_as_dataframe(period='1d', start_time=None, end_time=None):
@@ -45,6 +23,9 @@ def get_stock_data_as_dataframe(period='1d', start_time=None, end_time=None):
     if end_time is None:
         end_time = datetime.now().strftime('%Y%m%d%H%M%S')
     stock_list = get_targets_list_from_csv()
+
+    # 下载数据
+    download_history_data(stock_list=stock_list, period=period, start_time=start_time, end_time=end_time)
 
     try:
         market_data = xtdata.get_market_data_ex(
@@ -85,7 +66,7 @@ def save_data_to_csv(df, filename):
 
 
 def download_and_save_xt_date(period='1d', start_time=None, end_time=None, callback=None):
-    download_stock_data(period=period, start_time=start_time, end_time=end_time, callback=callback)
+    # download_stock_data(period=period, start_time=start_time, end_time=end_time, callback=callback)
     combined_df = get_stock_data_as_dataframe(period=period, start_time=start_time, end_time=end_time)
 
     if not combined_df.empty:

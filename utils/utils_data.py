@@ -101,7 +101,7 @@ def unsubscribe_real_data(period='1d', test = False):
     xtdata.run()
 
 
-def download_history_data(period='1d', start_time=None, end_time=None,):
+def download_history_data(stock_list=None, period='1d', start_time=None, end_time=None, callback=None, incrementally=True):
     """
     从 CSV 文件获取股票列表并下载历史数据。
 
@@ -110,25 +110,19 @@ def download_history_data(period='1d', start_time=None, end_time=None,):
     :param end_time: 结束时间，格式为 'YYYYMMDD'，默认当前日期
     :param callback: 下载数据时的回调函数，默认 None
     """
-    if not is_trading_day():
-        logger.info("今天不是交易日")
-        return False
-    # 获取股票列表
-    stock_list = get_targets_list_from_csv()
-
-    # 如果未提供 start_time，则默认设置为 '20200101'
+    if not stock_list:
+        stock_list = get_targets_list_from_csv()
     if start_time is None:
         start_time = '20200101'
-
-    # 如果未提供 end_time，则设置为当前日期，格式为 'YYYYMMDD'
     if end_time is None:
         end_time = datetime.now().strftime('%Y%m%d%H%M%S')
 
-    # 调用 xtdata.download_history_data2 方法下载历史数据
-    # for stock in stock_list:
-    #     xtdata.download_history_data(stock, period, start_time, end_time)
-    logger.info("数据下载完成。")
-
+    for stock in stock_list:
+        try:
+            xtdata.download_history_data(stock, period, start_time, end_time, incrementally=incrementally)
+            logger.info(f"成功下载股票数据：{stock}")
+        except Exception as e:
+            logger.error(f"下载股票数据失败：{stock}，错误信息：{e}")
 
 
 
