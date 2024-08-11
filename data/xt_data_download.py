@@ -24,7 +24,7 @@ def get_stock_data_as_dataframe(period='1d', start_time=None, end_time=None):
         end_time = datetime.now().strftime('%Y%m%d%H%M%S')
     stock_list = get_targets_list_from_csv()
 
-    pd.to_datetime("20230101")
+    # pd.to_datetime("20230101")
 
     # 下载数据
     download_history_data(stock_list=stock_list, period=period, start_time=start_time, end_time=end_time)
