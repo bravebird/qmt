@@ -7,6 +7,7 @@ from pathlib2 import Path
 from utils.utils_data import get_targets_list_from_csv  # 获取股票列表
 from loggers import logger
 from utils.utils_data import download_history_data
+from data.utils import rbf_encode_time_features
 
 
 def get_stock_data_as_dataframe(period='1d', start_time=None, end_time=None):

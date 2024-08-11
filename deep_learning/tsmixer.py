@@ -11,6 +11,7 @@ from data.xt_data_download import download_and_save_xt_date
 from loggers import logger
 from deep_learning.model_config import ModelParameters
 from utils.utils_general import is_trading_day
+from data.utils import rbf_encode_time_features
 
 def get_training_data(training_or_predicting='training'):
     # 1. 下载数据
@@ -56,19 +57,22 @@ def get_training_data(training_or_predicting='training'):
     future_date = xtdata.get_trading_calendar("SH", start_time=max_past_date, end_time=end_time)
     ts = np.concatenate((data['date'].unique(), future_date[1:]))
     ts = pd.DatetimeIndex(ts)
-    ts = ts.floor("D")
-    future_cov_df = pd.DataFrame(
-        # index=ts,
-        data={
-            'month_sin': np.sin(2 * np.pi * ts.month / 12),
-            # 'month_cos': np.cos(2 * np.pi * ts.month / 12),
-            'week_sin': np.sin(2 * np.pi * (ts.isocalendar().week / 53)),
-            # 'week_cos': np.cos(2 * np.pi * ts.isocalendar().week / 53),
-            'weekday_sin': np.sin(2 * np.pi * ts.weekday / 4),
-            # 'weekday_cos': np.cos(2 * np.pi * ts.weekday / 4),
-            "day": np.sin(2 * np.pi * ts.day / 31)
-        },
-    )
+    # ts = ts.floor("D")
+
+    future_cov_df = rbf_encode_time_features(ts)
+
+    # future_cov_df = pd.DataFrame(
+    #     # index=ts,
+    #     data={
+    #         'month_sin': np.sin(2 * np.pi * ts.month / 12),
+    #         # 'month_cos': np.cos(2 * np.pi * ts.month / 12),
+    #         'week_sin': np.sin(2 * np.pi * (ts.isocalendar().week / 53)),
+    #         # 'week_cos': np.cos(2 * np.pi * ts.isocalendar().week / 53),
+    #         'weekday_sin': np.sin(2 * np.pi * ts.weekday / 4),
+    #         # 'weekday_cos': np.cos(2 * np.pi * ts.weekday / 4),
+    #         "day": np.sin(2 * np.pi * ts.day / 31)
+    #     },
+    # )
     future_cov_df = future_cov_df.reset_index(drop=True)
     logger.debug("future_cov_df准备就绪")
     # 3.4 静态协变量static_covariates
