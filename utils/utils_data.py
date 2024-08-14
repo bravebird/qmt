@@ -113,7 +113,7 @@ def download_history_data(stock_list=None, period='1d', start_time=None, end_tim
     if not stock_list:
         stock_list = get_targets_list_from_csv()
     if start_time is None:
-        start_time = '20200101'
+        start_time = '20160101'
     if end_time is None:
         end_time = datetime.now().strftime('%Y%m%d%H%M%S')
 

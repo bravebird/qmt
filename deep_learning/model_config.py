@@ -68,7 +68,7 @@ class ModelParameters:
         if full_training:
             limit_train_batches = None
             limit_val_batches = None
-            max_epochs = 500
+            max_epochs = 800
             batch_size = 256
         else:
             limit_train_batches = 20

@@ -43,6 +43,7 @@ def buy_stock_async(stocks, strategy_name='', order_remark=''):
     position_list = [pos.stock_code for pos in positions if pos.volume > 0]
     position_count = len(position_list)
     available_slots = max(MAX_POSITIONS - position_count, 0)
+    available_slots = min(available_slots, len(stocks))
     if available_slots == 0:
         logger.info(f"当前持仓已满:{position_list}。")
         return False
@@ -115,6 +116,7 @@ def trading_with_fitted_model():
 
         result = df.iloc[0, :].sort_values(ascending=False) * 100
         to_buy = result[result > 0.2].index.to_list()
+
         logger.info(f"》》》》买入列表：{to_buy}")
 
         buy_stock_async(to_buy, strategy_name='tsmixer策略', order_remark='tsmixer策略买入。')

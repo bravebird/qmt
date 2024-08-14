@@ -79,7 +79,7 @@ def get_training_data(training_or_predicting='training'):
     # 暂无。
     # 4. 数据标准化。
     target_ts = TimeSeries.from_dataframe(target_df)
-    start_index = target_ts.time_index[-1000]
+    start_index = target_ts.time_index[1]
     target_ts = target_ts[start_index:]
     target_ts = target_ts.astype(np.float32)
     past_cov_ts = TimeSeries.from_dataframe(past_cov_df)
@@ -91,7 +91,7 @@ def get_training_data(training_or_predicting='training'):
     path_scaler_train = str(Path(__file__).parent.parent / 'assets/runtime/scaler_train.pkl')
     path_scaler_past = str(Path(__file__).parent.parent / 'assets/runtime/scaler_past.pkl')
     if training_or_predicting == 'training':
-        train = target_ts[: -60]
+        train = target_ts[: -65]
         val = target_ts[-80:]
         # train, val = target_ts.split_after(0.92)
         scaler_train = Scaler(name='train').fit(train)
@@ -100,17 +100,11 @@ def get_training_data(training_or_predicting='training'):
         dump(scaler_past, open(path_scaler_past, 'wb'))
     elif training_or_predicting == 'predicting':
         train = target_ts
-        val = target_ts[-80:]
-        try:
-            with open(path_scaler_train, 'rb') as f:
-                scaler_train = load(f)
-        except EOFError:
-            logger.error("Failed to load scaler_train: File is incomplete or corrupted.")
-        try:
-            with open(path_scaler_past, 'rb') as f:
-                scaler_past = load(f)
-        except EOFError:
-            logger.error("Failed to load scaler_past: File is incomplete or corrupted.")
+        val = target_ts[-120:]
+        with open(path_scaler_train, 'rb') as f:
+            scaler_train = load(f)
+        with open(path_scaler_past, 'rb') as f:
+            scaler_past = load(f)
     else:
         raise ValueError("training_or_predicting must be 'training' or 'predicting'")
 

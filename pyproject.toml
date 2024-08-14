@@ -24,6 +24,9 @@ apscheduler = "^3.10.4"
 concurrent-log-handler = "^0.9.25"
 colorlog = "^6.8.2"
 jupyterlab = "^4.2.4"
+optuna = "^3.6.1"
+optuna-integration = "^3.6.0"
+lightning = "^2.4.0"
 
 
 [build-system]
