@@ -25,25 +25,29 @@ def save_max_profit(max_profit_file=max_profit_path):
     global positions
 
     # 创建一个副本来保存需要删除的股票代码
+    positions = xt_trader.query_stock_positions(acc)  # 查询最新持仓信息
+    # 只保留可用股票余额大于0的持仓
+    positions = [pos for pos in positions if pos.can_use_volume > 0]
+    position_code_list = [pos.stock_code for pos in positions]
     stocks_to_remove = []
 
     # 检查每只股票的持仓量，如果持仓量为 0，就添加到删除列表
-    for pos in positions:
-        if pos.can_use_volume == 0:
-            stocks_to_remove.append(pos.stock_code)
 
-            # 从 max_profit 字典中删除持仓量为 0 的股票
-    for stock_code in stocks_to_remove:
-        if stock_code in max_profit:
-            del max_profit[stock_code]
+    for pos in max_profit.keys():
+        if pos not in position_code_list:
+            stocks_to_remove.append(pos)
+    for pos in stocks_to_remove:
+        del max_profit[pos]
 
-            # 保存更新后的 max_profit 字典到 Pickle 文件
+        # 保存更新后的 max_profit 字典到 Pickle 文件
     try:
         with open(max_profit_file, 'wb') as f:
             pickle.dump(max_profit, f)
         logger.info(f"Max profit saved successfully to {max_profit_file}")
     except Exception as e:
         logger.error(f"Error saving max profit to Pickle file: {e}")
+    logger.info(f"更新最大盈利：{max_profit}")
+    return max_profit
 
 
 def load_max_profit(max_profit_file=max_profit_path):
@@ -62,6 +66,7 @@ def load_max_profit(max_profit_file=max_profit_path):
     except Exception as e:
         logger.error(f"Error loading max profit from Pickle file: {e}")
         max_profit = {}
+    return max_profit
 
 
 def sell_stock(stock_code, quantity, price=0, strategy_name='', order_remark=''):
@@ -109,7 +114,7 @@ def abs_stop_loss(datas):
                 profit_rate = (last_price - avg_price) / avg_price
 
                 if profit_rate <= -0.008:
-                    sell_stock(stock_code, volume, 0, "止损策略", "收益率为-1%")  # 卖出可用数量
+                    sell_stock(stock_code, volume, 0, "止损策略", "收益率为-0.8%")  # 卖出可用数量
 
 
 def stop_loss_max_profit(datas):
@@ -129,7 +134,7 @@ def stop_loss_max_profit(datas):
             if avg_price != 0:
                 # 初始化最大盈利率
                 if stock_code not in max_profit:
-                    max_profit[stock_code] = (last_price - avg_price) / avg_price
+                    max_profit[stock_code] = 0
 
                 current_profit = (last_price - avg_price) / avg_price
                 if max_profit[stock_code] < current_profit:
@@ -158,7 +163,7 @@ def stop_loss_large_profit(datas):
             if avg_price != 0:
                 # 初始化最大盈利率
                 if stock_code not in max_profit:
-                    max_profit[stock_code] = (last_price - avg_price) / avg_price
+                    max_profit[stock_code] = 0
 
                 current_profit = (last_price - avg_price) / avg_price
                 if max_profit[stock_code] < current_profit:
@@ -186,6 +191,7 @@ def call_back_functions(data, last_update_time):
     # 如果离上次更新小于10分钟，就不执行更新
     if current_time - last_update_time.value >= 600:
         logger.info("止损程序监控中……")
+        load_max_profit()
         positions = xt_trader.query_stock_positions(acc)  # 查询最新持仓信息
         # 只保留可用股票余额大于0的持仓
         positions = [pos for pos in positions if pos.can_use_volume > 0]
@@ -198,8 +204,9 @@ def call_back_functions(data, last_update_time):
                 cancel_response = xt_trader.cancel_order_stock_async(acc, order.order_id)
                 logger.info(f"撤销订单 {order.order_id}。Response: {cancel_response}")
 
-        last_update_time.value = time.time()  # 更新上次更新时间
+        save_max_profit()
 
+        last_update_time.value = time.time()  # 更新上次更新时间
 
     abs_stop_loss(data)  # 执行绝对止损策略
     stop_loss_max_profit(data)  # 执行最大盈利回撤止损策略
@@ -207,13 +214,20 @@ def call_back_functions(data, last_update_time):
 
 
 def stop_loss_main():
+    global positions
+
     if not is_trading_day():
         logger.info("今天不是交易日")
         return False
 
+    positions = xt_trader.query_stock_positions(acc)  # 查询最新持仓信息
+    # 只保留可用股票余额大于0的持仓
+    positions = [pos for pos in positions if pos.can_use_volume > 0]
+
     manager = Manager()
     last_update_time = manager.Value('d', time.time())  # 使用Manager创建共享变量
     load_max_profit()  # 加载最大收益率
+    # save_max_profit()
     stock_list = get_targets_list_from_csv()  # 从Pickle文件读取股票列表
     logger.info(stock_list)
     xtdata.subscribe_whole_quote(
@@ -222,7 +236,7 @@ def stop_loss_main():
     )  # 订阅股票数据并设置回调函数
     logger.info("止损程序启动")
     xtdata.run()
-    
+
     connect_result = xt_trader.connect()
     print('建立交易连接，返回0表示连接成功', connect_result)
     # 对交易回调进行订阅，订阅后可以收到交易主推，返回0表示订阅成功

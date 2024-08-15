@@ -62,7 +62,7 @@ def add_jobs():
         download_history_data,
         'cron',
         day_of_week='mon-fri',  # 每个工作日运行
-        hour='9,13,15',
+        hour='9,12,15',
         minute=10,
         second=0,
         id='download_history_data'

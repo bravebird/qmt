@@ -27,6 +27,7 @@ jupyterlab = "^4.2.4"
 optuna = "^3.6.1"
 optuna-integration = "^3.6.0"
 lightning = "^2.4.0"
+jupyterlab-widgets = "^3.0.11"
 
 
 [build-system]
