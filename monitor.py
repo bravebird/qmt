@@ -28,7 +28,7 @@ executors = {
 job_defaults = {
     'misfire_grace_time': 300,  # 5分钟的宽限时间
     'coalesce': False,
-    'max_instances': 1
+    'max_instances': 50
 }
 
 scheduler = BackgroundScheduler(jobstores=jobstores, executors=executors, job_defaults=job_defaults)
@@ -131,14 +131,14 @@ def remove_jobs():
 
 
 # 每天18:00结束所有作业
-# scheduler.add_job(
-#     remove_jobs,
-#     'cron',
-#     hour=16,
-#     minute=0,
-#     second=0,
-#     id='remove_all_jobs'
-# )
+scheduler.add_job(
+    remove_jobs,
+    'cron',
+    hour=16,
+    minute=0,
+    second=0,
+    id='remove_all_jobs'
+)
 
 # 每天08:00重新添加作业
 scheduler.add_job(
