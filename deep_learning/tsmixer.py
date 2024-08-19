@@ -153,6 +153,7 @@ def fit_tsmixer_model(test=False):
 
 
 if __name__ == '__main__':
+    TimeSeries.from_group_dataframe()
     logger.info("Starting training process...")
     try:
         fit_tsmixer_model()

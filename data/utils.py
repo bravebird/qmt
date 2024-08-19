@@ -4,11 +4,46 @@ from joblib import dump, load
 from darts import TimeSeries
 from darts.dataprocessing.transformers import Scaler
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler
-# import logging
+from sklearn.preprocessing import OrdinalEncoder, MinMaxScaler
 # 自定义
 from loggers import logger
 from data.xt_data_download import download_history_data
+
+
+def encode_and_scale_dataframe(df):
+    """
+    对 DataFrame 中的所有字符串类型列进行 Ordinal 编码，并将结果缩放到 0 和 1 之间。
+
+    参数：
+    - df: pandas.DataFrame, 输入的数据帧。
+
+    返回：
+    - pandas.DataFrame, 处理后的数据帧，索引与输入保持一致。
+    """
+    # 复制 DataFrame 以维护索引
+    df_scaled = df.copy()
+
+    # 检测字符串类型列
+    categorical_columns = df.select_dtypes(include=['object']).columns
+
+    if not categorical_columns.empty:
+        # 初始化 OrdinalEncoder 和 MinMaxScaler
+        encoder = OrdinalEncoder()
+        scaler = MinMaxScaler(feature_range=(0, 1))
+
+        # 提取需要处理的列数据
+        data_to_encode = df_scaled[categorical_columns]
+
+        # 使用 OrdinalEncoder 进行编码
+        encoded_data = encoder.fit_transform(data_to_encode)
+
+        # 使用 MinMaxScaler 将编码数据缩放到 0 和 1 之间
+        scaled_encoded_data = scaler.fit_transform(encoded_data)
+
+        # 将缩放后的数据替换回原 DataFrame
+        df_scaled[categorical_columns] = scaled_encoded_data
+
+    return df_scaled
 
 
 def forward_fill_data(df):
@@ -52,11 +87,7 @@ def clean_data(data):
     @param data: 原始数据 DataFrame。
     @return: 清洗后的数据 DataFrame。
     """
-    # data = data.reset_index(drop=False)
-    # data = data.groupby('stock_code', include_groups=False).apply(forward_fill_data)
-    # data = data.groupby('stock_code', include_groups=False).apply(add_time_sequence)
-    # data = calculate_overnight_return(data)
-    # return data
+    data.replace([np.inf, -np.inf], 0, inplace=True)
     data = data.reset_index(drop=False)
     data = data.groupby('stock_code').apply(forward_fill_data, include_groups=False)
     data = data.groupby('stock_code').apply(add_time_sequence, include_groups=False)
@@ -236,8 +267,6 @@ def get_training_data(training_or_predicting='training', xtdata=None):
 
     return train, val, past_cov_ts, future_cov_ts, scaler_train
 
-
-from sklearn.preprocessing import MinMaxScaler
 
 
 def rbf(x, centers, width):

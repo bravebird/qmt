@@ -31,13 +31,11 @@ def save_max_profit(max_profit_file=max_profit_path):
     position_code_list = [pos.stock_code for pos in positions]
     stocks_to_remove = []
 
-    # 检查每只股票的持仓量，如果持仓量为 0，就添加到删除列表
+    # 检查每只股票的持仓量，如果持仓量为 0，最大值重置为0
 
     for pos in max_profit.keys():
         if pos not in position_code_list:
-            stocks_to_remove.append(pos)
-    for pos in stocks_to_remove:
-        del max_profit[pos]
+            max_profit[pos] = 0
 
         # 保存更新后的 max_profit 字典到 Pickle 文件
     try:
@@ -135,6 +133,7 @@ def stop_loss_max_profit(datas):
                 # 初始化最大盈利率
                 if stock_code not in max_profit:
                     max_profit[stock_code] = 0
+                    # return False
 
                 current_profit = (last_price - avg_price) / avg_price
                 if max_profit[stock_code] < current_profit:

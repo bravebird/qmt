@@ -28,17 +28,18 @@ def get_stock_data_as_dataframe(period='1d', start_time=None, end_time=None):
     # pd.to_datetime("20230101")
 
     # 下载数据
-    download_history_data(stock_list=stock_list, period=period, start_time=start_time, end_time=end_time)
+    download_history_data(stock_list=stock_list, period=period, start_time=start_time, end_time=end_time, incrementally=False)
 
     try:
-        market_data = xtdata.get_market_data_ex(
+        market_data = xtdata.get_local_data(
             field_list=[],
             stock_list=stock_list,
             period=period,
             start_time=start_time,
             end_time=end_time,
             count=-1,
-            dividend_type='front_ratio',
+            # dividend_type='front_ratio',
+            dividend_type='front',
             fill_data=True
         )
 
