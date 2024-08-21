@@ -153,7 +153,9 @@ def fit_tsmixer_model(test=False):
 
 
 if __name__ == '__main__':
-    TimeSeries.from_group_dataframe()
+    import darts
+
+    darts.utils
     logger.info("Starting training process...")
     try:
         fit_tsmixer_model()

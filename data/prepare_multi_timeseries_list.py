@@ -29,7 +29,17 @@ def generate_time_series(clean_df):
         )
 
     targets_ts_list = create_series(['overnight_return'])
-    past_cov_ts_list = create_series(['open', 'high', 'low', 'close', 'amount'])
+
+    values_columns = [ 'open', 'high', 'low', 'close', 'amount',
+                      'open_lag_3', 'close_lag_3', 'amount_lag_3',
+                      'open_lag_5', 'close_lag_5', 'amount_lag_5', 'open_lag_10',
+                      'close_lag_10', 'amount_lag_10', 'open_lag_20', 'close_lag_20',
+                      'amount_lag_20', 'open_lag_60', 'close_lag_60', 'amount_lag_60',
+                      'open_pct_change', 'close_pct_change', 'amount_pct_change', 'mean_open',
+                      'mean_high', 'mean_low', 'mean_close', 'mean_amount', 'ma_7', 'ma_14',
+                      'ma_21', 'ema_12', 'ema_26', 'ema_3', 'ema_5', 'rsi_14',
+                      'rolling_max_high_14', 'rolling_min_low_14']
+    past_cov_ts_list = create_series(values_columns)
 
     # 转换数据类型为 float32
     targets_ts_list = [ts.astype(np.float32) for ts in targets_ts_list]

@@ -5,6 +5,7 @@ from trader import xt_trader, acc, setup_xt_trader
 from xtquant import xtconstant
 from xtquant import xtdata
 from pathlib2 import Path
+from datetime import datetime
 # 自定义模块
 from loggers import logger  # 日志记录器
 from utils.utils_data import get_targets_list_from_csv
@@ -113,7 +114,7 @@ def abs_stop_loss(datas):
 
                 if profit_rate <= -0.008:
                     sell_stock(stock_code, volume, 0, "止损策略", "收益率为-0.8%")  # 卖出可用数量
-
+                    logger.warning(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{profit_rate:.2%}")
 
 def stop_loss_max_profit(datas):
     """
@@ -140,9 +141,12 @@ def stop_loss_max_profit(datas):
                     max_profit[stock_code] = current_profit
                     save_max_profit()
 
+                print(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{current_profit:.2%}， 最大盈利：{max_profit[stock_code]:.2%}")
+
                 # 判断回撤止损条件
                 if max_profit[stock_code] > 0.005 and current_profit <= max_profit[stock_code] * 0.5:
                     sell_stock(stock_code, volume, 0, "止盈策略", f"最大盈利超过0.5%，当前回撤至{current_profit}")
+                    logger.warning(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{current_profit:.2%}， 最大盈利：{max_profit[stock_code]:.2%}")
 
 
 def stop_loss_large_profit(datas):
@@ -172,6 +176,7 @@ def stop_loss_large_profit(datas):
                 # 判断回撤止损条件
                 if max_profit[stock_code] > 0.20 and current_profit <= max_profit[stock_code] - 0.10:
                     sell_stock(stock_code, volume, 0, "止盈策略", f"最大盈利超过20%，当前回撤至{current_profit}")
+                    logger.warning(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{current_profit:.2%}， 最大盈利：{max_profit[stock_code]:.2%}")
 
 
 def call_back_functions(data, last_update_time):

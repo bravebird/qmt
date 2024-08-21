@@ -81,6 +81,55 @@ def calculate_overnight_return(data):
     return data
 
 
+def add_features(df):
+    # 添加滞后的窗口期
+    lags = [3, 5, 10, 20, 60]
+    for lag in lags:
+        for col in ['open', 'close', 'amount']:
+            df[f'{col}_lag_{lag}'] = df[col].shift(lag)
+
+            # 计算涨幅： ((当前价格 - 前一个价格) / 前一个价格) * 100
+    for col in ['open', 'close', 'amount']:
+        df[f'{col}_pct_change'] = df[col].pct_change() * 100
+
+        # 计算均值
+    df['mean_open'] = df['open'].rolling(window=5).mean()
+    df['mean_high'] = df['high'].rolling(window=5).mean()
+    df['mean_low'] = df['low'].rolling(window=5).mean()
+    df['mean_close'] = df['close'].rolling(window=5).mean()
+    df['mean_amount'] = df['amount'].rolling(window=5).mean()
+
+    # 额外的特征（例如：移动平均线和 RSI 指标等）
+    # 7日、14日和21日的移动平均线
+    df['ma_7'] = df['close'].rolling(window=5).mean()
+    df['ma_14'] = df['close'].rolling(window=10).mean()
+    df['ma_21'] = df['close'].rolling(window=20).mean()
+
+    # 指数平滑移动平均线（EMA）
+    df['ema_12'] = df['close'].ewm(span=10, adjust=False).mean()
+    df['ema_26'] = df['close'].ewm(span=20, adjust=False).mean()
+    df['ema_3'] = df['overnight_return'].ewm(span=3, adjust=False).mean()
+    df['ema_5'] = df['overnight_return'].ewm(span=5, adjust=False).mean()
+
+    # 相对强弱指数（RSI）
+    delta = df['close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=10).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=10).mean()
+    rs = gain / loss
+    df['rsi_14'] = 100 - (100 / (1 + rs))
+
+    # 移动最大值和最小值（也可以用于其他分析）
+    df['rolling_max_high_14'] = df['high'].rolling(window=10).max()
+    df['rolling_min_low_14'] = df['low'].rolling(window=10).min()
+
+    # 填充可能出现的NAN值，将最早的行填回去（na处理）
+    df.fillna(method='bfill', inplace=True)
+
+    df.reset_index(inplace=True, drop=True)
+
+    return df
+
+
 def clean_data(data):
     """
     清洗数据，包括前向填充、添加时间序列和计算隔夜收益率等操作。
@@ -92,7 +141,11 @@ def clean_data(data):
     data = data.groupby('stock_code').apply(forward_fill_data, include_groups=False)
     data = data.groupby('stock_code').apply(add_time_sequence, include_groups=False)
     data = calculate_overnight_return(data)
+    # 0/1目标
+    data['overnight_return'] = data['overnight_return'].apply(lambda x: 1 if x > 0.002 else 0)
+    data = data.groupby('stock_code').apply(add_features, include_groups=False)
     data.reset_index(inplace=True)
+    data.replace([np.inf, -np.inf], 0, inplace=True)
     return data
 
 
