@@ -54,7 +54,7 @@ def log_job_execution(event):
 scheduler.add_listener(log_job_execution, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 
 
-def retry_on_failure(max_attempts=3, delay=60):
+def retry_on_failure(max_attempts=3, delay=10):
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
