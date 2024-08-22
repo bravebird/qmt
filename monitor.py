@@ -1,11 +1,13 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ProcessPoolExecutor
-from apscheduler.jobstores.memory import MemoryJobStore
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 import portalocker
 import threading
 import time
 import multiprocessing
 from pathlib import Path
+import functools
 
 # 导入您的函数
 from utils.utils_data import download_history_data
@@ -21,24 +23,60 @@ from loggers import logger
 stop_event = threading.Event()
 stop_loss_process = None
 
+
 # 定义调度器
-jobstores = {'default': MemoryJobStore()}
+jobstores = {
+    'default': SQLAlchemyJobStore(url='sqlite:///assets/runtime/jobs.sqlite')
+}
 executors = {'default': ProcessPoolExecutor(10)}
 job_defaults = {
-    'coalesce': True,
+    'coalesce': False,
     'max_instances': 1,
-    'misfire_grace_time': 60  # 增加到60秒
+    'misfire_grace_time': 120  # 1小时
 }
 scheduler = BackgroundScheduler(jobstores=jobstores, executors=executors, job_defaults=job_defaults)
-scheduler.start()
+
+# 作业执行状态追踪
+job_status = {}
 
 LOCK_FILE_PATH = Path(__file__).parent.joinpath('assets/runtime/file_lock.lock')
+
+
+def log_job_execution(event):
+    if event.exception:
+        logger.error(f"作业 {event.job_id} 执行失败: {event.exception}")
+        job_status[event.job_id] = {'status': 'failed', 'last_run': event.scheduled_run_time}
+    else:
+        logger.info(f"作业 {event.job_id} 执行成功")
+        job_status[event.job_id] = {'status': 'success', 'last_run': event.scheduled_run_time}
+
+
+scheduler.add_listener(log_job_execution, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
+
+
+def retry_on_failure(max_attempts=3, delay=60):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            attempts = 0
+            while attempts < max_attempts:
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    attempts += 1
+                    logger.error(f"作业执行失败 (尝试 {attempts}/{max_attempts}): {str(e)}")
+                    if attempts < max_attempts:
+                        time.sleep(delay)
+            logger.critical(f"作业在 {max_attempts} 次尝试后仍然失败")
+
+        return wrapper
+
+    return decorator
 
 
 def stop_loss_main():
     """为stop_loss_main加锁"""
     logger.info('正在启动stop_loss_main……')
-    # 使用更简洁的 with open 语句
     with LOCK_FILE_PATH.open('w') as lock_file:
         try:
             portalocker.lock(lock_file, portalocker.LOCK_EX | portalocker.LOCK_NB)
@@ -58,8 +96,8 @@ def is_trading_day_decorator(func):
             logger.info(f"今天不是交易日，跳过执行{func.__name__}。")
             return
         return func(*args, **kwargs)
-    return wrapper
 
+    return wrapper
 
 
 def start_stop_loss():
@@ -93,24 +131,39 @@ def stop_stop_loss():
         logger.info('stop_loss_main进程未运行，无需停止操作。')
 
 
+@retry_on_failure()
+@is_trading_day_decorator
+def download_history_data_job():
+    logger.info("开始下载历史数据")
+    download_history_data()
+    logger.info("历史数据下载完成")
+
+
+@retry_on_failure()
+@is_trading_day_decorator
+def fit_tsmixer_model_job():
+    logger.info("开始拟合TSMixer模型")
+    fit_tsmixer_model()
+    logger.info("TSMixer模型拟合完成")
+
+
+@retry_on_failure()
+@is_trading_day_decorator
+def conditionally_execute_trading_job():
+    logger.info("开始执行交易条件检查")
+    conditionally_execute_trading()
+    logger.info("交易条件检查完成")
+
+
+@retry_on_failure()
+@is_trading_day_decorator
+def generate_trading_report_job():
+    logger.info("开始生成交易报告")
+    generate_trading_report()
+    logger.info("交易报告生成完成")
+
+
 def add_jobs():
-    @is_trading_day_decorator
-    def download_history_data_job():
-        download_history_data()
-
-    @is_trading_day_decorator
-    def fit_tsmixer_model_job():
-        fit_tsmixer_model()
-
-    @is_trading_day_decorator
-    def conditionally_execute_trading_job():
-        conditionally_execute_trading()
-
-    @is_trading_day_decorator
-    def generate_trading_report_job():
-        generate_trading_report()
-
-    # 每个工作日特定时间调用
     scheduler.add_job(download_history_data_job, 'cron', day_of_week='mon-fri', hour=9, minute=0, id='download1',
                       replace_existing=True)
     scheduler.add_job(download_history_data_job, 'cron', day_of_week='mon-fri', hour=15, minute=20, id='download2',
@@ -137,17 +190,21 @@ def add_jobs():
 
 if __name__ == '__main__':
     try:
+        scheduler.start()
         start_miniqmt()
         download_history_data()
         fit_tsmixer_model()
         generate_trading_report()
         stop_loss_main()
 
-        # 添加任务
         add_jobs()
 
+        # 主循环
         while True:
-            time.sleep(600)
+            time.sleep(60)
+            # 定期检查作业状态
+            for job_id, status in job_status.items():
+                logger.info(f"作业 {job_id} 状态: {status['status']}, 上次运行: {status['last_run']}")
 
     except (KeyboardInterrupt, SystemExit):
         scheduler.shutdown()
