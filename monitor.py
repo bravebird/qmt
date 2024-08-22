@@ -1,12 +1,16 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ProcessPoolExecutor
 from apscheduler.jobstores.memory import MemoryJobStore
-from datetime import datetime
+import portalocker
 import threading
 import time
+import multiprocessing
+from pathlib import Path
+
+# 导入您的函数
 from utils.utils_data import download_history_data
 from utils.utils_general import is_trading_day
-from stop_loss.stop_loss_main import stop_loss_main
+from stop_loss.stop_loss_main import stop_loss_main as raw_stop_loss_main
 from deep_learning.tsmixer import fit_tsmixer_model
 from deep_learning.monitor_buy import conditionally_execute_trading
 from mini_xtclient.mini_xt import start_miniqmt
@@ -15,119 +19,140 @@ from loggers import logger
 
 # 全局中断事件
 stop_event = threading.Event()
-job_lock = threading.Lock()  # 用于同步任务执行
+stop_loss_process = None
 
-# 调度器设置
-jobstores = {
-    'default': MemoryJobStore()
-}
-
-executors = {
-    'default': ProcessPoolExecutor(max_workers=4)
-}
-
+# 定义调度器
+jobstores = {'default': MemoryJobStore()}
+executors = {'default': ProcessPoolExecutor(10)}
 job_defaults = {
-    'misfire_grace_time': 300,
-    'coalesce': False,
-    'max_instances': 1  # 确保每个作业在任意时间只有一个实例运行
+    'coalesce': True,
+    'max_instances': 1,
+    'misfire_grace_time': 60  # 增加到60秒
 }
-
 scheduler = BackgroundScheduler(jobstores=jobstores, executors=executors, job_defaults=job_defaults)
+scheduler.start()
 
-# 监控任务函数
-def monitored_task(task_func, *args, **kwargs):
-    logger.info(f"Starting task {task_func.__name__}")
-    with job_lock:  # 防止多个线程同时进入
+LOCK_FILE_PATH = Path(__file__).parent.joinpath('assets/runtime/file_lock.lock')
+
+
+def stop_loss_main():
+    """为stop_loss_main加锁"""
+    logger.info('正在启动stop_loss_main……')
+    # 使用更简洁的 with open 语句
+    with LOCK_FILE_PATH.open('w') as lock_file:
         try:
-            if not stop_event.is_set():
-                task_func(*args, **kwargs)
-        except Exception as e:
-            logger.error(f"Error in task {task_func.__name__}: {e}")
-    logger.info(f"Finished task {task_func.__name__}")
-
-# 添加作业函数
-def add_jobs():
-    if not is_trading_day():
-        logger.info("今天不是交易日，程序放假。")
-        return
-
-    job_ids = [
-        ('start_miniqmt', start_miniqmt, '9-14', 0),
-        ('download_history_data', download_history_data, '9,12,15', 10),
-        ('fit_tsmixer_model', fit_tsmixer_model, 9, 10),
-        ('conditionally_execute_trading', conditionally_execute_trading, 14, 58),
-        ('generate_trading_report', generate_trading_report, "9,12,15", 5)
-    ]
-
-    for job_id, task, hour, minute in job_ids:
-        existing_job = scheduler.get_job(job_id)
-        if not existing_job:
-            logger.info(f"Adding job: {job_id}.")
-            scheduler.add_job(
-                monitored_task,
-                'cron',
-                args=(task,),
-                day_of_week='mon-fri',
-                hour=hour,
-                minute=minute,
-                second=0,
-                id=job_id
-            )
-
-# 单独线程处理可能阻塞的任务
-def run_stop_loss_main():
-    logger.info("Running stop_loss_main in a separate thread.")
-    while not stop_event.is_set():
-        with job_lock:
+            portalocker.lock(lock_file, portalocker.LOCK_EX | portalocker.LOCK_NB)
             try:
-                stop_loss_main()
+                raw_stop_loss_main()
             except Exception as e:
-                logger.error(f"Error in stop_loss_main: {e}")
-            time.sleep(10)
+                logger.error(f"stop_loss_main 发生错误: {e}")
+            finally:
+                portalocker.unlock(lock_file)
+        except portalocker.exceptions.LockException:
+            logger.info("stop_loss_main 已在运行，忽略此次调用。")
 
-def remove_jobs_and_stop_tasks():
-    logger.info("移除所有job")
-    stop_event.set()
-    scheduler.remove_all_jobs()
-    logger.info("所有作业已移除，正在停止任务。")
 
-# 每天初始化新作业
-def initialize_new_day_jobs():
-    logger.info("重新初始化新一天的任务")
-    add_jobs()
-    stop_event.clear()
-    stop_loss_thread = threading.Thread(target=run_stop_loss_main)
-    stop_loss_thread.start()
+def is_trading_day_decorator(func):
+    def wrapper(*args, **kwargs):
+        if not is_trading_day():
+            logger.info(f"今天不是交易日，跳过执行{func.__name__}。")
+            return
+        return func(*args, **kwargs)
+    return wrapper
 
-# 初始化调度器，每天在指定时间添加新作业
-scheduler.add_job(
-    initialize_new_day_jobs,
-    'cron',
-    hour="8,12",
-    minute=0,
-    second=0,
-    id='initialize_new_day_jobs'
-)
 
-# 在特定时间移除所有作业以结束
-scheduler.add_job(
-    remove_jobs_and_stop_tasks,
-    'cron',
-    hour="11,15",
-    minute=59,
-    second=0,
-    id='remove_all_jobs'
-)
+
+def start_stop_loss():
+    """启动stop_loss_main"""
+    logger.info('正在启动stop_loss_main……')
+    global stop_loss_process
+    if not is_trading_day():
+        logger.info("今天不是交易日，无需启动start_stop_loss")
+        return False
+    if stop_loss_process is None or not stop_loss_process.is_alive():
+        stop_event.clear()  # 确保事件被清除
+        stop_loss_process = multiprocessing.Process(target=stop_loss_main)
+        stop_loss_process.start()
+        logger.info("stop_loss_main 已启动")
+    else:
+        logger.info("stop_loss_main 进程已存在，无需重复启动")
+
+
+def stop_stop_loss():
+    logger.info("正在停止stop_loss_main")
+    global stop_loss_process
+    if stop_loss_process is not None and stop_loss_process.is_alive():
+        logger.info("正在停止stop_loss_main")
+        stop_event.set()
+        stop_loss_process.join(timeout=10)  # 等待进程结束，最多等待10秒
+        if stop_loss_process.is_alive():
+            stop_loss_process.terminate()  # 如果进程仍然活跃，强制终止
+        stop_loss_process = None
+        logger.info("已停止stop_loss_main")
+    else:
+        logger.info('stop_loss_main进程未运行，无需停止操作。')
+
+
+def add_jobs():
+    @is_trading_day_decorator
+    def download_history_data_job():
+        download_history_data()
+
+    @is_trading_day_decorator
+    def fit_tsmixer_model_job():
+        fit_tsmixer_model()
+
+    @is_trading_day_decorator
+    def conditionally_execute_trading_job():
+        conditionally_execute_trading()
+
+    @is_trading_day_decorator
+    def generate_trading_report_job():
+        generate_trading_report()
+
+    # 每个工作日特定时间调用
+    scheduler.add_job(download_history_data_job, 'cron', day_of_week='mon-fri', hour=9, minute=0, id='download1',
+                      replace_existing=True)
+    scheduler.add_job(download_history_data_job, 'cron', day_of_week='mon-fri', hour=15, minute=20, id='download2',
+                      replace_existing=True)
+    scheduler.add_job(fit_tsmixer_model_job, 'cron', day_of_week='mon-fri', hour=9, minute=5, id='fit_model',
+                      replace_existing=True)
+    scheduler.add_job(conditionally_execute_trading_job, 'cron', day_of_week='mon-fri', hour=14, minute=58,
+                      id='trade_condition', replace_existing=True)
+    scheduler.add_job(generate_trading_report_job, 'cron', day_of_week='mon-fri', hour='9,11,15', minute='20,35,5',
+                      id='report', replace_existing=True)
+
+    # 控制stop_loss_main的开始与停止
+    scheduler.add_job(start_stop_loss, 'cron', day_of_week='mon-fri', hour='9', minute='29-59/10',
+                      id='start_stop_loss_morning_9', replace_existing=True)
+    scheduler.add_job(start_stop_loss, 'cron', day_of_week='mon-fri', hour='10-11', minute='0-29/10',
+                      id='start_stop_loss_morning', replace_existing=True)
+    scheduler.add_job(start_stop_loss, 'cron', day_of_week='mon-fri', hour='13-14', minute='*/10',
+                      id='start_stop_loss_afternoon', replace_existing=True)
+    scheduler.add_job(stop_stop_loss, 'cron', day_of_week='mon-fri', hour=11, minute=30, id='stop_stop_loss_morning',
+                      replace_existing=True)
+    scheduler.add_job(stop_stop_loss, 'cron', day_of_week='mon-fri', hour=15, minute=0, id='stop_stop_loss_afternoon',
+                      replace_existing=True)
+
 
 if __name__ == '__main__':
-    scheduler.start()
-    logger.info("启动并初始化作业")
-    initialize_new_day_jobs()  # 启动时运行一次
-
     try:
+        start_miniqmt()
+        download_history_data()
+        fit_tsmixer_model()
+        generate_trading_report()
+        stop_loss_main()
+
+        # 添加任务
+        add_jobs()
+
         while True:
-            time.sleep(2)
+            time.sleep(600)
+
     except (KeyboardInterrupt, SystemExit):
-        logger.info("即将关闭调度器")
-        stop_event.set()
         scheduler.shutdown()
+        stop_event.set()
+        if stop_loss_process and stop_loss_process.is_alive():
+            stop_loss_process.join(timeout=5)
+            if stop_loss_process.is_alive():
+                stop_loss_process.terminate()
