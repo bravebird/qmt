@@ -1,15 +1,16 @@
+import time
+import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ProcessPoolExecutor
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
-import portalocker
-import threading
-import time
 import multiprocessing
+import threading
+import portalocker
 from pathlib import Path
 import functools
 
-# 导入您的函数
+# 导入你的函数
 from utils.utils_data import download_history_data
 from utils.utils_general import is_trading_day
 from stop_loss.stop_loss_main import stop_loss_main as raw_stop_loss_main
@@ -22,7 +23,6 @@ from loggers import logger
 # 全局中断事件
 stop_event = threading.Event()
 stop_loss_process = None
-
 
 # 定义调度器
 jobstores = {
@@ -90,16 +90,6 @@ def stop_loss_main():
             logger.info("stop_loss_main 已在运行，忽略此次调用。")
 
 
-def is_trading_day_decorator(func):
-    def wrapper(*args, **kwargs):
-        if not is_trading_day():
-            logger.info(f"今天不是交易日，跳过执行{func.__name__}。")
-            return
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
 def start_stop_loss():
     """启动stop_loss_main"""
     logger.info('正在启动stop_loss_main……')
@@ -132,32 +122,40 @@ def stop_stop_loss():
 
 
 @retry_on_failure()
-@is_trading_day_decorator
 def download_history_data_job():
+    if not is_trading_day():
+        logger.info(f"今天不是交易日，跳过执行 download_history_data_job。")
+        return
     logger.info("开始下载历史数据")
     download_history_data()
     logger.info("历史数据下载完成")
 
 
 @retry_on_failure()
-@is_trading_day_decorator
 def fit_tsmixer_model_job():
+    if not is_trading_day():
+        logger.info(f"今天不是交易日，跳过执行 fit_tsmixer_model_job。")
+        return
     logger.info("开始拟合TSMixer模型")
     fit_tsmixer_model()
     logger.info("TSMixer模型拟合完成")
 
 
 @retry_on_failure()
-@is_trading_day_decorator
 def conditionally_execute_trading_job():
+    if not is_trading_day():
+        logger.info(f"今天不是交易日，跳过执行 conditionally_execute_trading_job。")
+        return
     logger.info("开始执行交易条件检查")
     conditionally_execute_trading()
     logger.info("交易条件检查完成")
 
 
 @retry_on_failure()
-@is_trading_day_decorator
 def generate_trading_report_job():
+    if not is_trading_day():
+        logger.info(f"今天不是交易日，跳过执行 generate_trading_report_job。")
+        return
     logger.info("开始生成交易报告")
     generate_trading_report()
     logger.info("交易报告生成完成")
@@ -172,8 +170,13 @@ def add_jobs():
                       replace_existing=True)
     scheduler.add_job(conditionally_execute_trading_job, 'cron', day_of_week='mon-fri', hour=14, minute=58,
                       id='trade_condition', replace_existing=True)
-    scheduler.add_job(generate_trading_report_job, 'cron', day_of_week='mon-fri', hour='9,11,15', minute='20,35,5',
-                      id='report', replace_existing=True)
+    scheduler.add_job(generate_trading_report_job, 'cron', day_of_week='mon-fri', hour=9, minute=20,
+                      id='report_0920', replace_existing=True)
+    scheduler.add_job(generate_trading_report_job, 'cron', day_of_week='mon-fri', hour=11, minute=35,
+                      id='report_1135', replace_existing=True)
+    scheduler.add_job(generate_trading_report_job, 'cron', day_of_week='mon-fri', hour=15, minute=5,
+                      id='report_1505', replace_existing=True)
+
 
     # 控制stop_loss_main的开始与停止
     scheduler.add_job(start_stop_loss, 'cron', day_of_week='mon-fri', hour='9', minute='29-59/10',
@@ -190,14 +193,12 @@ def add_jobs():
 
 if __name__ == '__main__':
     try:
-        scheduler.start()
         start_miniqmt()
-        download_history_data()
-        fit_tsmixer_model()
-        generate_trading_report()
-        stop_loss_main()
-
+        logger.info("添加计划")
         add_jobs()
+        scheduler.start()
+
+        logger.info("调度器已启动并正在运行...")
 
         # 主循环
         while True:
@@ -207,7 +208,10 @@ if __name__ == '__main__':
                 logger.info(f"作业 {job_id} 状态: {status['status']}, 上次运行: {status['last_run']}")
 
     except (KeyboardInterrupt, SystemExit):
+        logger.info("捕获系统退出信号，准备关闭调度器...")
         scheduler.shutdown()
+        logger.info("调度器已成功关闭")
+        # 停止其他子进程
         stop_event.set()
         if stop_loss_process and stop_loss_process.is_alive():
             stop_loss_process.join(timeout=5)
