@@ -112,8 +112,8 @@ def abs_stop_loss(datas):
             if avg_price != 0:
                 profit_rate = (last_price - avg_price) / avg_price
 
-                if profit_rate <= -0.008:
-                    sell_stock(stock_code, volume, 0, "止损策略", "收益率为-0.8%")  # 卖出可用数量
+                if profit_rate <= -0.006:
+                    sell_stock(stock_code, volume, 0, "止损策略", "收益率为-0.6%")  # 卖出可用数量
                     logger.warning(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{profit_rate:.2%}")
 
 def stop_loss_max_profit(datas):
@@ -146,6 +146,9 @@ def stop_loss_max_profit(datas):
                 # 判断回撤止损条件
                 if max_profit[stock_code] > 0.005 and current_profit <= max_profit[stock_code] * 0.5:
                     sell_stock(stock_code, volume, 0, "止盈策略", f"最大盈利超过0.5%，当前回撤至{current_profit}")
+                    logger.warning(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{current_profit:.2%}， 最大盈利：{max_profit[stock_code]:.2%}")
+                elif max_profit[stock_code] > 0.003 and current_profit <= 0:
+                    sell_stock(stock_code, volume, 0, "止盈策略", f"最大盈利超过0.3%，当前回撤至{current_profit}")
                     logger.warning(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{current_profit:.2%}， 最大盈利：{max_profit[stock_code]:.2%}")
 
 

@@ -67,7 +67,7 @@ class ProgramMonitor:
                 return
 
                 # 点击登录
-            time.sleep(15)
+            time.sleep(20)
             if self.is_login_progress_running():
                 finder = WindowRegexFinder(r"e海方舟-量化交易版[.\d ]+")
                 # 查找窗口句柄

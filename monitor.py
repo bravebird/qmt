@@ -1,5 +1,4 @@
 import time
-import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ProcessPoolExecutor
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
@@ -9,6 +8,7 @@ import threading
 import portalocker
 from pathlib import Path
 import functools
+from datetime import datetime
 
 # 导入你的函数
 from utils.utils_data import download_history_data
@@ -190,10 +190,14 @@ def add_jobs():
     scheduler.add_job(stop_stop_loss, 'cron', day_of_week='mon-fri', hour=15, minute=0, id='stop_stop_loss_afternoon',
                       replace_existing=True)
 
+    # 定时监测客户端是否启动
+    scheduler.add_job(start_miniqmt, 'cron', day_of_week='mon-fri', minute="*/30", id='start_miniqmt',
+                      replace_existing=True, next_run_time=datetime.now())
+
 
 if __name__ == '__main__':
     try:
-        start_miniqmt()
+        # start_miniqmt()
         logger.info("添加计划")
         add_jobs()
         scheduler.start()
@@ -202,7 +206,7 @@ if __name__ == '__main__':
 
         # 主循环
         while True:
-            time.sleep(60)
+            time.sleep(600)
             # 定期检查作业状态
             for job_id, status in job_status.items():
                 logger.info(f"作业 {job_id} 状态: {status['status']}, 上次运行: {status['last_run']}")

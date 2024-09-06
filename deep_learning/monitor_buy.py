@@ -11,6 +11,7 @@ from pathlib2 import Path
 from apscheduler.executors.pool import ProcessPoolExecutor
 from apscheduler.schedulers.background import BackgroundScheduler
 from tzlocal import get_localzone
+from xtquant import xtdata
 
 # 提权
 os.environ.update({"__COMPAT_LAYER": "RunAsInvoker"})
@@ -36,8 +37,13 @@ def buy_stock_async(stocks, strategy_name='', order_remark=''):
     """
     买入股票函数：根据股票代码后缀确定所属市场并设置 order_type 后，异步发出买入指令。
     """
+    for _ in range(5):
+        asset = xt_trader.query_stock_asset(acc)
+        if asset is not None:
+            break
+        else:
+            logger.warning(f"xt_trader.query_stock_asset返回值为None")
 
-    asset = xt_trader.query_stock_asset(acc)
     cash = asset.cash
     positions = xt_trader.query_stock_positions(acc)
     position_list = [pos.stock_code for pos in positions if pos.volume > 0]
@@ -50,6 +56,10 @@ def buy_stock_async(stocks, strategy_name='', order_remark=''):
 
     if len(stocks) > available_slots:
         stocks = stocks[:available_slots]
+
+    # for stock in stocks:
+    #     xtdata.subscribe_quote(stock, period="l2quote", count=-1)
+    # time.sleep(2)
 
     for stock_code in stocks:
         if stock_code.endswith('.SH') or stock_code.endswith('.SZ'):

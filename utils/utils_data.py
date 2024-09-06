@@ -26,7 +26,6 @@ def get_targets_list_from_csv():
     return stock_list
 
 
-
 def get_max_ask_price(stock_code):
     """
     获取指定股票代码的五档行情最高报价
@@ -38,6 +37,9 @@ def get_max_ask_price(stock_code):
         # 确保 MiniQmt 已经有所需的数据
         code_list = [stock_code]
         data = xtdata.get_full_tick(code_list)
+
+        data2 = xtdata.get_l2_quote(stock_code=stock_code)
+        logger.warning(data2)
 
         if stock_code in data and bool(data[stock_code]):
             time = data[stock_code]['timetag']
@@ -60,9 +62,10 @@ def on_subscribe_data(datas):
     for stock_code in datas:
         print(stock_code, datas[stock_code])
 
-def subscribe_whole_real_data(test = False):
+
+def subscribe_whole_real_data(test=False):
     """订阅全推行情数据"""
-    if not(is_trading_day or test):
+    if not (is_trading_day or test):
         logger.info("今天不是交易日")
         return False
     res = xtdata.connect()
@@ -71,9 +74,11 @@ def subscribe_whole_real_data(test = False):
     xtdata.run()
     return xtdata
 
-def subscribe_real_data(period='1d', test = False):
+
+# def subscribe_real_data(period="1d", test=False):
+def subscribe_real_data(period="l2quote", test=False):
     """订阅全推行情数据"""
-    if not(is_trading_day or test):
+    if not (is_trading_day or test):
         logger.info("今天不是交易日")
         return False
     res = xtdata.connect()
@@ -85,9 +90,9 @@ def subscribe_real_data(period='1d', test = False):
     xtdata.run()
 
 
-def unsubscribe_real_data(period='1d', test = False):
+def unsubscribe_real_data(period='1d', test=False):
     """订阅全推行情数据"""
-    if not(is_trading_day or test):
+    if not (is_trading_day or test):
         logger.info("今天不是交易日")
         return False
     res = xtdata.connect()
@@ -101,7 +106,8 @@ def unsubscribe_real_data(period='1d', test = False):
     xtdata.run()
 
 
-def download_history_data(stock_list=None, period='1d', start_time=None, end_time=None, callback=None, incrementally=True):
+def download_history_data(stock_list=None, period='1d', start_time=None, end_time=None, callback=None,
+                          incrementally=True):
     """
     从 CSV 文件获取股票列表并下载历史数据。
 
@@ -125,9 +131,6 @@ def download_history_data(stock_list=None, period='1d', start_time=None, end_tim
             logger.error(f"下载股票数据失败：{stock}，错误信息：{e}")
 
 
-
-
 if __name__ == '__main__':
     subscribe_real_data(test=False)
     # get_max_ask_price("000001.SZ")
-
