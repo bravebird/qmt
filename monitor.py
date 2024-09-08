@@ -18,6 +18,7 @@ from deep_learning.tsmixer import fit_tsmixer_model
 from deep_learning.monitor_buy import conditionally_execute_trading
 from mini_xtclient.mini_xt import start_miniqmt
 from trader.reporter import generate_trading_report
+from utils.utils_data import get_max_ask_price
 from loggers import logger
 
 # 全局中断事件
@@ -193,6 +194,12 @@ def add_jobs():
     # 定时监测客户端是否启动
     scheduler.add_job(start_miniqmt, 'cron', day_of_week='mon-fri', minute="*/30", id='start_miniqmt',
                       replace_existing=True, next_run_time=datetime.now())
+
+    # 测试最大值
+    scheduler.add_job(get_max_ask_price, 'cron', day_of_week='mon-fri', hour='9-14', minute="*/15",
+                      id='get_max_ask_price', args=('513880.SH',),
+                      replace_existing=True, next_run_time=datetime.now())
+
 
 
 if __name__ == '__main__':
