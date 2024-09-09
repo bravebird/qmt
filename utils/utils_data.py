@@ -38,16 +38,25 @@ def get_max_ask_price(stock_code):
         code_list = [stock_code]
         data = xtdata.get_full_tick(code_list)
 
-        data2 = xtdata.get_l2_quote(stock_code=stock_code)
-        logger.warning(data2)
-
         if stock_code in data and bool(data[stock_code]):
             time = data[stock_code]['timetag']
             max_ask_price = max(max(data[stock_code]['askPrice']), max(data[stock_code]['bidPrice']))
-            max_ask_price = max(max_ask_price, data[stock_code]['high'])
-            logger.info(data[stock_code]['high'])
+            instrument = xtdata.get_instrument_detail(stock_code)
+            max_ask_price = max(
+                max_ask_price,   # 最高要价
+                data[stock_code]['high'],  # 最高价
+                instrument["SettlementPrice"] * 1.01,  # 前结算价+1%
+                data[stock_code]['lastSettlementPrice'] * 1.01  # 前结算价+1%
+            )
+            # 不超过涨停价
+            max_ask_price = min(max_ask_price, instrument["UpStopPrice"])
+            max_ask_price = round(max_ask_price, 2)
+            # 信息
+            logger.trader(stock_code)
+            logger.trader(instrument["SettlementPrice"])
+            logger.trader(data[stock_code]['lastSettlementPrice'])
+            logger.trader(instrument["UpStopPrice"])
             logger.trader(data[stock_code]['askPrice'])
-            logger.info(data[stock_code]['bidPrice'])
             logger.info(f"股票:{stock_code}; 时间:{time}; 价格:{max_ask_price}")
             return max_ask_price
         else:

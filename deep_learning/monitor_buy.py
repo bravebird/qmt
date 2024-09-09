@@ -50,6 +50,7 @@ def buy_stock_async(stocks, strategy_name='', order_remark=''):
     position_count = len(position_list)
     available_slots = max(MAX_POSITIONS - position_count, 0)
     available_slots = min(available_slots, len(stocks))
+    logger.info(f"available_slots: {available_slots}")
     if available_slots == 0:
         logger.info(f"当前持仓已满:{position_list}。")
         return False

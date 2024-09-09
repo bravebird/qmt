@@ -18,7 +18,7 @@ from deep_learning.tsmixer import fit_tsmixer_model
 from deep_learning.monitor_buy import conditionally_execute_trading
 from mini_xtclient.mini_xt import start_miniqmt
 from trader.reporter import generate_trading_report
-from utils.utils_data import get_max_ask_price
+from utils.utils_data import get_max_ask_price, subscribe_real_data
 from loggers import logger
 
 # 全局中断事件
@@ -167,10 +167,13 @@ def add_jobs():
                       replace_existing=True)
     scheduler.add_job(download_history_data_job, 'cron', day_of_week='mon-fri', hour=15, minute=20, id='download2',
                       replace_existing=True)
+
     scheduler.add_job(fit_tsmixer_model_job, 'cron', day_of_week='mon-fri', hour=9, minute=5, id='fit_model',
                       replace_existing=True)
+
     scheduler.add_job(conditionally_execute_trading_job, 'cron', day_of_week='mon-fri', hour=14, minute=58,
                       id='trade_condition', replace_existing=True)
+
     scheduler.add_job(generate_trading_report_job, 'cron', day_of_week='mon-fri', hour=9, minute=20,
                       id='report_0920', replace_existing=True)
     scheduler.add_job(generate_trading_report_job, 'cron', day_of_week='mon-fri', hour=11, minute=35,
@@ -178,6 +181,9 @@ def add_jobs():
     scheduler.add_job(generate_trading_report_job, 'cron', day_of_week='mon-fri', hour=15, minute=5,
                       id='report_1505', replace_existing=True)
 
+    # 订阅行情数据
+    scheduler.add_job(subscribe_real_data, 'cron', day_of_week='mon-fri', hour=9, minute=29,
+                      id='subscribe_real_data', replace_existing=True)
 
     # 控制stop_loss_main的开始与停止
     scheduler.add_job(start_stop_loss, 'cron', day_of_week='mon-fri', hour='9', minute='29-59/10',
@@ -197,7 +203,7 @@ def add_jobs():
 
     # 测试最大值
     scheduler.add_job(get_max_ask_price, 'cron', day_of_week='mon-fri', hour='9-14', minute="*/15",
-                      id='get_max_ask_price', args=('513880.SH',),
+                      id='get_max_ask_price', args=('159985.SZ',),
                       replace_existing=True, next_run_time=datetime.now())
 
 
