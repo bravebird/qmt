@@ -181,9 +181,9 @@ def add_jobs():
     scheduler.add_job(generate_trading_report_job, 'cron', day_of_week='mon-fri', hour=15, minute=5,
                       id='report_1505', replace_existing=True)
 
-    # 订阅行情数据
-    scheduler.add_job(subscribe_real_data, 'cron', day_of_week='mon-fri', hour=9, minute=29,
-                      id='subscribe_real_data', replace_existing=True)
+    # # 订阅行情数据
+    # scheduler.add_job(subscribe_real_data, 'cron', day_of_week='mon-fri', hour=9, minute=29,
+    #                   id='subscribe_real_data', replace_existing=True)
 
     # 控制stop_loss_main的开始与停止
     scheduler.add_job(start_stop_loss, 'cron', day_of_week='mon-fri', hour='9', minute='29-59/10',
