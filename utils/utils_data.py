@@ -47,7 +47,10 @@ def get_max_ask_price(stock_code):
             )
             instrument = xtdata.get_instrument_detail(stock_code)
             # 不超过涨停价
-            max_ask_price = min(max_ask_price, instrument["UpStopPrice"])
+            if instrument["UpStopPrice"] > 0:
+                max_ask_price = min(max_ask_price, instrument["UpStopPrice"])
+            else:
+                logger.warning(f"{stock_code}涨停价异常")
             max_ask_price = round(max_ask_price, 2)
             # 信息
             logger.info(f"股票:{stock_code}; 时间:{time}; 价格:{max_ask_price}")
