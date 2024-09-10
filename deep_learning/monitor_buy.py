@@ -128,7 +128,7 @@ def trading_with_fitted_model():
         result = df.iloc[0, :].sort_values(ascending=False) * 100
         to_buy = result[result > 0.2].index.to_list()
 
-        logger.info(f"》》》》买入列表：{to_buy}")
+        logger.trader(f"》》》》买入列表：{to_buy}")
 
         buy_stock_async(to_buy, strategy_name='tsmixer策略', order_remark='tsmixer策略买入。')
 
