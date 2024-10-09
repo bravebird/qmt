@@ -186,10 +186,12 @@ def add_jobs():
     #                   id='subscribe_real_data', replace_existing=True)
 
     # 控制stop_loss_main的开始与停止
-    scheduler.add_job(start_stop_loss, 'cron', day_of_week='mon-fri', hour='9', minute='29-59/10',
+    scheduler.add_job(start_stop_loss, 'cron', day_of_week='mon-fri', hour='9', minute='30-59/10',
                       id='start_stop_loss_morning_9', replace_existing=True)
-    scheduler.add_job(start_stop_loss, 'cron', day_of_week='mon-fri', hour='10-11', minute='0-29/10',
-                      id='start_stop_loss_morning', replace_existing=True)
+    scheduler.add_job(start_stop_loss, 'cron', day_of_week='mon-fri', hour='10', minute='0-59/10',
+                      id='start_stop_loss_morning_10', replace_existing=True)
+    scheduler.add_job(start_stop_loss, 'cron', day_of_week='mon-fri', hour='11', minute='0-29/10',
+                      id='start_stop_loss_morning_11', replace_existing=True)
     scheduler.add_job(start_stop_loss, 'cron', day_of_week='mon-fri', hour='13-14', minute='*/10',
                       id='start_stop_loss_afternoon', replace_existing=True)
     scheduler.add_job(stop_stop_loss, 'cron', day_of_week='mon-fri', hour=11, minute=30, id='stop_stop_loss_morning',
@@ -201,10 +203,10 @@ def add_jobs():
     scheduler.add_job(start_miniqmt, 'cron', day_of_week='mon-fri', minute="*/30", id='start_miniqmt',
                       replace_existing=True, next_run_time=datetime.now())
 
-    # 测试最大值
-    scheduler.add_job(get_max_ask_price, 'cron', day_of_week='mon-fri', hour='9-14', minute="*/15",
-                      id='get_max_ask_price', args=('159985.SZ',),
-                      replace_existing=True, next_run_time=datetime.now())
+    # # 测试最大值
+    # scheduler.add_job(get_max_ask_price, 'cron', day_of_week='mon-fri', hour='9-14', minute="*/15",
+    #                   id='get_max_ask_price', args=('159985.SZ',),
+    #                   replace_existing=True, next_run_time=datetime.now())
 
 
 

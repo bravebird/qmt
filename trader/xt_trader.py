@@ -13,7 +13,7 @@ from trader.xt_acc import acc
 load_dotenv()
 
 
-def setup_xt_trader():
+def setup_xt_trader(acc=acc):
     callback = MyXtQuantTraderCallback()
 
     path = Path(config['xt_client']['program_dir']).parent.parent / 'userdata_mini/'
@@ -33,7 +33,7 @@ def setup_xt_trader():
         if connect_result < 0:
             raise RuntimeError('Failed to connect to XT')
 
-    # xt_trader.subscribe(acc)
+    xt_trader.subscribe(acc)
     return xt_trader
 
 
@@ -42,7 +42,6 @@ try:
 except Exception as e:
     logger.critical("Critical error in main: ", exc_info=e)
     # xt_trader.subscribe(acc)
-xt_trader.subscribe(acc)
 
 if __name__ == '__main__':
     logger.info("启动xt_trader.run_forever")

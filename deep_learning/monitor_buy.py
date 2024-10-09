@@ -26,23 +26,29 @@ from deep_learning.tsmixer import get_training_data
 from utils.utils_data import get_max_ask_price
 from utils.utils_general import is_trading_day
 from trader.xt_acc import acc
-from trader.xt_trader import xt_trader
+from trader.xt_trader import xt_trader, setup_xt_trader
 from loggers import logger
 
 # 设置最大持仓数
-MAX_POSITIONS = 2
+MAX_POSITIONS = 3
 
 
 def buy_stock_async(stocks, strategy_name='', order_remark=''):
     """
     买入股票函数：根据股票代码后缀确定所属市场并设置 order_type 后，异步发出买入指令。
     """
-    for _ in range(5):
+
+    for i in range(15):
+        xt_trader = setup_xt_trader()
         asset = xt_trader.query_stock_asset(acc)
         if asset is not None:
             break
         else:
             logger.warning(f"xt_trader.query_stock_asset返回值为None")
+            time.sleep(1)
+
+    if asset is None:
+        logger.error(f"xt_trader.query_stock_asset返回值为None")
 
     cash = asset.cash
     positions = xt_trader.query_stock_positions(acc)
@@ -129,6 +135,7 @@ def trading_with_fitted_model():
         to_buy = result[result > 0.2].index.to_list()
 
         logger.trader(f"》》》》买入列表：{to_buy}")
+
 
         buy_stock_async(to_buy, strategy_name='tsmixer策略', order_remark='tsmixer策略买入。')
 

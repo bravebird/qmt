@@ -8,7 +8,7 @@ from pathlib2 import Path
 from datetime import datetime
 # 自定义模块
 from loggers import logger  # 日志记录器
-from utils.utils_data import get_targets_list_from_csv
+from utils.utils_data import get_targets_list_from_csv, identify_security_type
 from utils.utils_xtclient import start_xt_client
 from utils.utils_general import is_trading_day, is_transaction_hour
 
@@ -29,7 +29,9 @@ def save_max_profit(max_profit_file=max_profit_path):
     positions = xt_trader.query_stock_positions(acc)  # 查询最新持仓信息
     # 只保留可用股票余额大于0的持仓
     positions = [pos for pos in positions if pos.can_use_volume > 0]
+
     position_code_list = [pos.stock_code for pos in positions]
+
     stocks_to_remove = []
 
     # 检查每只股票的持仓量，如果持仓量为 0，最大值重置为0
@@ -95,26 +97,34 @@ def sell_stock(stock_code, quantity, price=0, strategy_name='', order_remark='')
 
 def abs_stop_loss(datas):
     """
-    绝对止损策略函数，如果当前收益率小于或等于-1%，则卖出股票。
+    绝对止损策略函数。如果当前收益率小于或等于阈值，则卖出股票。
+
+    :param datas: 包含股票数据的字典，包含 lastPrice 信息。
     """
     global positions  # 声明使用全局变量 positions
-    # logger.debug('绝对止损程序。')
 
     for pos in positions:
         stock_code = pos.stock_code
         volume = pos.can_use_volume
         avg_price = pos.avg_price
 
-        # logger.debug(datas.keys())
         if stock_code in datas:
-            # logger.debug(datas.keys)
+            stock_type = identify_security_type(stock_code)
+            if stock_type == "ETF":
+                threshold = -0.005
+            elif stock_type == "普通股票":
+                threshold = -0.01
+            else:
+                raise ValueError(f"未知股票类型：{stock_code}")
+
             last_price = datas[stock_code]['lastPrice']
             if avg_price != 0:
                 profit_rate = (last_price - avg_price) / avg_price
 
-                if profit_rate <= -0.006:
-                    sell_stock(stock_code, volume, 0, "止损策略", "收益率为-0.6%")  # 卖出可用数量
+                if profit_rate <= threshold:
+                    sell_stock(stock_code, volume, 0, "止损策略", f"收益率为{threshold:.2%}")  # 卖出可用数量
                     logger.warning(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{profit_rate:.2%}")
+
 
 def stop_loss_max_profit(datas):
     """
@@ -128,7 +138,7 @@ def stop_loss_max_profit(datas):
         volume = pos.can_use_volume
         avg_price = pos.avg_price
 
-        if stock_code in datas:
+        if stock_code in datas.keys():
             last_price = datas[stock_code]['lastPrice']
             if avg_price != 0:
                 # 初始化最大盈利率
@@ -144,11 +154,11 @@ def stop_loss_max_profit(datas):
                 print(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{current_profit:.2%}， 最大盈利：{max_profit[stock_code]:.2%}")
 
                 # 判断回撤止损条件
-                if max_profit[stock_code] > 0.005 and current_profit <= max_profit[stock_code] * 0.5:
-                    sell_stock(stock_code, volume, 0, "止盈策略", f"最大盈利超过0.5%，当前回撤至{current_profit}")
+                if max_profit[stock_code] > 0.008 and current_profit <= max_profit[stock_code] * 0.6:
+                    sell_stock(stock_code, volume, 0, "止盈策略", f"最大盈利超过0.8%，当前回撤至{current_profit}")
                     logger.warning(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{current_profit:.2%}， 最大盈利：{max_profit[stock_code]:.2%}")
-                elif max_profit[stock_code] > 0.003 and current_profit <= 0:
-                    sell_stock(stock_code, volume, 0, "止盈策略", f"最大盈利超过0.3%，当前回撤至{current_profit}")
+                elif max_profit[stock_code] > 0.004 and current_profit <= 0.001:
+                    sell_stock(stock_code, volume, 0, "止盈策略", f"最大盈利超过0.4%，当前回撤至{current_profit}")
                     logger.warning(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{current_profit:.2%}， 最大盈利：{max_profit[stock_code]:.2%}")
 
 
@@ -177,8 +187,8 @@ def stop_loss_large_profit(datas):
                     save_max_profit()
 
                 # 判断回撤止损条件
-                if max_profit[stock_code] > 0.20 and current_profit <= max_profit[stock_code] - 0.10:
-                    sell_stock(stock_code, volume, 0, "止盈策略", f"最大盈利超过20%，当前回撤至{current_profit}")
+                if max_profit[stock_code] > 0.35 and current_profit <= max_profit[stock_code] - 0.15:
+                    sell_stock(stock_code, volume, 0, "止盈策略", f"最大盈利超过30%，当前回撤至{current_profit}")
                     logger.warning(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{current_profit:.2%}， 最大盈利：{max_profit[stock_code]:.2%}")
 
 

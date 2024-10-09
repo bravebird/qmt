@@ -3,6 +3,7 @@ from xtquant import xtdata
 from datetime import datetime
 from pathlib import Path
 import time
+import math
 # 自定义
 from config import config
 from loggers import logger
@@ -45,13 +46,14 @@ def get_max_ask_price(stock_code):
                 max(data[stock_code]['bidPrice']),  # 最高买价
                 data[stock_code]['lastPrice'] * 1.01  # 最新价+1%
             )
+            max_ask_price = math.ceil(max_ask_price * 100) / 100
             instrument = xtdata.get_instrument_detail(stock_code)
             # 不超过涨停价
             if instrument["UpStopPrice"] > 0:
                 max_ask_price = min(max_ask_price, instrument["UpStopPrice"])
             else:
                 logger.warning(f"{stock_code}涨停价异常")
-            max_ask_price = round(max_ask_price, 2)
+            # max_ask_price = round(max_ask_price, 2)
             # 信息
             logger.info(f"股票:{stock_code}; 时间:{time}; 价格:{max_ask_price}")
             return max_ask_price
@@ -81,7 +83,7 @@ def subscribe_whole_real_data(test=False):
 
 
 # def subscribe_real_data(period="1d", test=False):
-def subscribe_real_data(period="l2quote", test=False):
+def subscribe_real_data(period="1d", test=False):
     """订阅全推行情数据"""
     if not (is_trading_day or test):
         logger.info("今天不是交易日")
@@ -134,6 +136,21 @@ def download_history_data(stock_list=None, period='1d', start_time=None, end_tim
             logger.info(f"成功下载股票数据：{stock}")
         except Exception as e:
             logger.error(f"下载股票数据失败：{stock}，错误信息：{e}")
+
+
+def identify_security_type(code):
+    # 提取证券代码的基础部分
+    code_base = code.split('.')[0]
+
+    # 判断证券类型
+    if code_base.startswith(('513', '515', '516', '518', '588', '159', '161')):
+        return "ETF"
+    elif code_base.startswith(('600', '601', '000', '002', '300')):
+        return "普通股票"
+    elif code_base.startswith(('110', '113', '111', '112')):
+        return "债券"
+
+    return "未知类型"
 
 
 if __name__ == '__main__':

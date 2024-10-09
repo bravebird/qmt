@@ -5,9 +5,9 @@ def test_get_training_data():
     get_training_data()
 
 
-def test_subscribt_data():
-    from utils.utils_data import subscribe_real_data
-    subscribe_real_data()
+# def test_subscribt_data():
+#     from utils.utils_data import subscribe_real_data
+#     subscribe_real_data()
 
 
 def test_get_combined_timeseries():
@@ -23,3 +23,11 @@ def test_get_combined_timeseries():
 def test_fetch_and_clean_data():
     from data.prepare_combined_timeseries import fetch_and_clean_data
     df = fetch_and_clean_data()
+
+
+def test_get_positions():
+    from trader import xt_trader, acc, setup_xt_trader
+
+    positions = xt_trader.query_stock_positions(acc)
+    for pos in positions:
+        print(pos.stock_code, pos.can_use_volume)
