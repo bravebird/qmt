@@ -115,7 +115,7 @@ def abs_stop_loss(datas):
             elif stock_type == "普通股票":
                 threshold = -0.01
             else:
-                raise ValueError(f"未知股票类型：{stock_code}")
+                logger.error(f"未知股票类型：{stock_code}")
 
             last_price = datas[stock_code]['lastPrice']
             if avg_price != 0:
@@ -138,28 +138,35 @@ def stop_loss_max_profit(datas):
         volume = pos.can_use_volume
         avg_price = pos.avg_price
 
+        # 价格为0
+        if avg_price <= 0:
+            return "买入均价为0"
+
         if stock_code in datas.keys():
             last_price = datas[stock_code]['lastPrice']
-            if avg_price != 0:
-                # 初始化最大盈利率
-                if stock_code not in max_profit:
-                    max_profit[stock_code] = 0
-                    # return False
 
-                current_profit = (last_price - avg_price) / avg_price
-                if max_profit[stock_code] < current_profit:
-                    max_profit[stock_code] = current_profit
-                    save_max_profit()
+            # 初始化最大盈利率
+            if stock_code not in max_profit:
+                max_profit[stock_code] = 0
+                # return False
 
-                print(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{current_profit:.2%}， 最大盈利：{max_profit[stock_code]:.2%}")
+            current_profit = (last_price - avg_price) / avg_price
+            if max_profit[stock_code] < current_profit:
+                max_profit[stock_code] = current_profit
+                save_max_profit()
 
-                # 判断回撤止损条件
-                if max_profit[stock_code] > 0.008 and current_profit <= max_profit[stock_code] * 0.6:
-                    sell_stock(stock_code, volume, 0, "止盈策略", f"最大盈利超过0.8%，当前回撤至{current_profit}")
-                    logger.warning(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{current_profit:.2%}， 最大盈利：{max_profit[stock_code]:.2%}")
-                elif max_profit[stock_code] > 0.004 and current_profit <= 0.001:
-                    sell_stock(stock_code, volume, 0, "止盈策略", f"最大盈利超过0.4%，当前回撤至{current_profit}")
-                    logger.warning(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{current_profit:.2%}， 最大盈利：{max_profit[stock_code]:.2%}")
+            print(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{current_profit:.2%}， 最大盈利：{max_profit[stock_code]:.2%}")
+
+            # 判断回撤止损条件
+            if max_profit[stock_code] > 0.008 and current_profit <= max_profit[stock_code] * 0.6:
+                sell_stock(stock_code, volume, 0, "止盈策略", f"最大盈利超过0.8%，当前回撤至{current_profit}")
+                logger.warning(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{current_profit:.2%}， 最大盈利：{max_profit[stock_code]:.2%}")
+            elif max_profit[stock_code] > 0.004 and current_profit <= 0.001:
+                sell_stock(stock_code, volume, 0, "止盈策略", f"最大盈利超过0.4%，当前回撤至{current_profit}")
+                logger.warning(f"-- {datetime.now()} 股票：{stock_code}， 当前盈利：{current_profit:.2%}， 最大盈利：{max_profit[stock_code]:.2%}")
+        else:
+            # logger.debug(f"股票价格未订阅{stock_code}
+            return "未订阅股票"
 
 
 def stop_loss_large_profit(datas):
@@ -200,6 +207,7 @@ def call_back_functions(data, last_update_time):
     if not is_transaction_hour():
         # logger.info("不在交易时间内")
         return False
+    # logger.info(data.keys())
 
     global positions  # 声明使用全局变量 positions
     # positions = xt_trader.query_stock_positions(acc)
@@ -245,8 +253,10 @@ def stop_loss_main():
     last_update_time = manager.Value('d', time.time())  # 使用Manager创建共享变量
     load_max_profit()  # 加载最大收益率
     # save_max_profit()
-    stock_list = get_targets_list_from_csv()  # 从Pickle文件读取股票列表
-    logger.info(stock_list)
+    stock_list = get_targets_list_from_csv()  #
+    logger.info(f"订阅行情{stock_list}")
+    # logger.info(stock_list)
+    subscribe_result = xt_trader.subscribe(acc)
     xtdata.subscribe_whole_quote(
         stock_list,
         callback=lambda data: call_back_functions(data, last_update_time)
@@ -255,10 +265,10 @@ def stop_loss_main():
     xtdata.run()
 
     connect_result = xt_trader.connect()
-    print('建立交易连接，返回0表示连接成功', connect_result)
+    logger.info('建立交易连接，返回0表示连接成功', connect_result)
     # 对交易回调进行订阅，订阅后可以收到交易主推，返回0表示订阅成功
     subscribe_result = xt_trader.subscribe(acc)
-    print('对交易回调进行订阅，订阅后可以收到交易主推，返回0表示订阅成功', subscribe_result)
+    logger.info('对交易回调进行订阅，订阅后可以收到交易主推，返回0表示订阅成功', subscribe_result)
 
     # 这一行是注册全推回调函数 包括下单判断 安全起见处于注释状态 确认理解效果后再放开
     # xtdata.subscribe_whole_quote(["SH", "SZ"], callback=f)

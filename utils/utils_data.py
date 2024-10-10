@@ -143,7 +143,7 @@ def identify_security_type(code):
     code_base = code.split('.')[0]
 
     # 判断证券类型
-    if code_base.startswith(('513', '515', '516', '518', '588', '159', '161')):
+    if code_base.startswith(('512', '513', '515', '516', '518', '588', '159', '161')):
         return "ETF"
     elif code_base.startswith(('600', '601', '000', '002', '300')):
         return "普通股票"
