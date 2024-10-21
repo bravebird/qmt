@@ -141,8 +141,11 @@ def clean_data(data):
     data = data.groupby('stock_code').apply(forward_fill_data, include_groups=False)
     data = data.groupby('stock_code').apply(add_time_sequence, include_groups=False)
     data = calculate_overnight_return(data)
+    # 预测第二天的隔夜收益率，而不是当天的
+    data['overnight_return'] = data.groupby('stock_code')['overnight_return'].shift(-1)
     # 0/1目标
     data['overnight_return'] = data['overnight_return'].apply(lambda x: 1 if x > 0.002 else 0)
+
     data = data.groupby('stock_code').apply(add_features, include_groups=False)
     data.reset_index(inplace=True)
     data.replace([np.inf, -np.inf], 0, inplace=True)

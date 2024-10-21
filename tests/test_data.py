@@ -27,7 +27,14 @@ def test_fetch_and_clean_data():
 
 def test_get_positions():
     from trader import xt_trader, acc, setup_xt_trader
+    from utils.utils_data import get_targets_list_from_csv
 
     positions = xt_trader.query_stock_positions(acc)
+    # print([pos.incomeRate for pos in positions])
+    print(dir(positions[0]))
+    targets = get_targets_list_from_csv()
+    print(targets)
+
     for pos in positions:
-        print(pos.stock_code, pos.can_use_volume)
+        if pos.stock_code in targets:
+            print(pos.stock_code, pos.can_use_volume)

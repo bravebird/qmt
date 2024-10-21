@@ -52,6 +52,14 @@ def buy_stock_async(stocks, strategy_name='', order_remark=''):
 
     cash = asset.cash
     positions = xt_trader.query_stock_positions(acc)
+    positions_stocks = [pos.stock_code for pos in positions]
+    set1 = set(stocks)
+    set2 = set(positions_stocks)
+    # 求差集
+    difference = set1 - set2
+    # 将结果转换回列表（如果需要）
+    stocks = list(difference)
+
     position_list = [pos.stock_code for pos in positions if pos.volume > 0]
     position_count = len(position_list)
     available_slots = max(MAX_POSITIONS - position_count, 0)

@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 import time
 import math
+from typing import List, Optional
 # 自定义
 from config import config
 from loggers import logger
@@ -113,22 +114,29 @@ def unsubscribe_real_data(period='1d', test=False):
     xtdata.run()
 
 
-def download_history_data(stock_list=None, period='1d', start_time=None, end_time=None, callback=None,
-                          incrementally=True):
-    """
-    从 CSV 文件获取股票列表并下载历史数据。
 
-    :param period: 时间周期，默认 '1d'
-    :param start_time: 起始时间，格式为 'YYYYMMDD'，默认 '20200101'
-    :param end_time: 结束时间，格式为 'YYYYMMDD'，默认当前日期
-    :param callback: 下载数据时的回调函数，默认 None
+def download_history_data(
+        stock_list: Optional[List[str]] = None,
+        period: str = '1d',
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        callback: Optional[callable] = None,
+        incrementally: bool = False
+) -> None:
     """
-    if not stock_list:
+    下载指定股票列表的历史数据。
+
+    :param stock_list: 股票代码列表，默认为从 CSV 文件获取
+    :param period: 时间周期，默认 '1d'
+    :param start_time: 起始时间，格式为 'YYYYMMDD'，默认 '20160101'
+    :param end_time: 结束时间，格式为 'YYYYMMDD%H%M%S'，默认当前日期
+    :param callback: 下载数据时的回调函数，默认 None
+    :param incrementally: 是否增量下载，默认 False
+    """
+    if stock_list is None:
         stock_list = get_targets_list_from_csv()
-    if start_time is None:
-        start_time = '20160101'
-    if end_time is None:
-        end_time = datetime.now().strftime('%Y%m%d%H%M%S')
+    start_time = start_time or '20160101'
+    end_time = end_time or datetime.now().strftime('%Y%m%d%H%M%S')
 
     for stock in stock_list:
         try:
