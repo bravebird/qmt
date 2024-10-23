@@ -69,8 +69,8 @@ def buy_stock_async(stocks, strategy_name='', order_remark=''):
         logger.info(f"当前持仓已满:{position_list}。")
         return False
 
-    if len(stocks) > available_slots:
-        stocks = stocks[:available_slots]
+    # if len(stocks) > available_slots:
+    #     stocks = stocks[:available_slots]
 
     # for stock in stocks:
     #     xtdata.subscribe_quote(stock, period="l2quote", count=-1)
@@ -86,6 +86,10 @@ def buy_stock_async(stocks, strategy_name='', order_remark=''):
 
         # 读取最高要价
         max_ask_price = get_max_ask_price(stock_code)
+
+        if max_ask_price == 999999:
+            logger.warning(f"股票已经涨停：{stock_code}")
+            continue
 
         if not max_ask_price:
             logger.warning(f"未能获得股票数据：{stock_code}")
