@@ -4,8 +4,8 @@ def test_load_max_profit():
     program.load_max_profit()
     print(program.max_profit)
 
-    program.max_profit["515070.SH"] = 0.15
-    program.save_max_profit()
+    # program.max_profit["515070.SH"] = 0.15
+    # program.save_max_profit()
     program.load_max_profit()
 
     print(program.max_profit.get("515070.SH",3))

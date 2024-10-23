@@ -21,9 +21,10 @@ max_profit_lock = threading.Lock()
 class StopLossProgram:
     def __init__(self):
         self.max_profit = {}
-        self.positions = []
+        self.positions = {}
         self.load_config()
         self.load_max_profit()
+        self.positions_lock = threading.Lock()
 
     def load_config(self):
         """
@@ -56,13 +57,11 @@ class StopLossProgram:
         """
         with max_profit_lock:
             try:
-                # 查询最新持仓信息
-                self.positions = xt_trader.query_stock_positions(acc)
-                self.positions = [pos for pos in self.positions if pos.can_use_volume > 0]
-                position_code_set = {pos.stock_code for pos in self.positions}
+                # 更新持仓信息
+                self.update_positions()
 
                 # 重置已卖出股票的最高收益率
-                removed_stocks = set(self.max_profit.keys()) - position_code_set
+                removed_stocks = set(self.max_profit.keys()) - set(self.positions.keys())
                 for stock_code in removed_stocks:
                     self.max_profit.pop(stock_code, None)
                     logger.info(f"重置 {stock_code} 的最高收益率")
@@ -83,13 +82,25 @@ class StopLossProgram:
                 if MAX_PROFIT_PATH.exists():
                     with open(MAX_PROFIT_PATH, 'rb') as f:
                         self.max_profit = pickle.load(f)
-                    logger.debug(f"成功加载 max_profit")
+                    logger.debug(f"从 {MAX_PROFIT_PATH} 成功加载 max_profit{self.max_profit}")
                 else:
                     self.max_profit = {}
                     logger.warning(f"未找到 max_profit 文件 {MAX_PROFIT_PATH}，将使用空字典")
             except Exception as e:
                 logger.exception(f"加载 max_profit 时发生异常: {e}")
                 self.max_profit = {}
+
+    def update_positions(self):
+        """
+        更新持仓信息，只保留可用数量大于0的持仓。
+        """
+        with self.positions_lock:
+            try:
+                positions = xt_trader.query_stock_positions(acc)
+                self.positions = {pos.stock_code: pos for pos in positions if pos.can_use_volume > 0}
+                logger.info(f"已更新持仓信息: {[pos.stock_code for pos in self.positions.values()]}")
+            except Exception as e:
+                logger.exception(f"更新持仓信息时发生异常: {e}")
 
     def sell_stock(self, stock_code, quantity, price=0, strategy_name='', order_remark=''):
         """
@@ -103,7 +114,7 @@ class StopLossProgram:
             )
             logger.info(f'卖出股票【{stock_code}】，数量【{quantity}】，返回值为【{response}】')
             # 更新持仓信息
-            self.positions = xt_trader.query_stock_positions(acc)
+            self.update_positions()
         except Exception as e:
             logger.exception(f"卖出股票时发生异常: {e}")
 
@@ -125,12 +136,12 @@ class StopLossProgram:
         1. 当收益率达到止损阈值（-1%）时，立即卖出止损。
         2. 当收益率超过止盈阈值（如3%）后，若从最高收益率回撤超过设定值（如30%），则卖出止盈。
         """
-
-        position_list = [pos.stock_code for pos in self.positions]
-        for stock_code in datas.keys():
-            if stock_code in position_list:
-                volume = self.positions[stock_code].volume
-                avg_price = self.positions[stock_code].avg_price
+        with self.positions_lock:
+            stocks_set = set(self.positions.keys()) & set(datas.keys())
+            for stock_code in stocks_set:
+                position = self.positions[stock_code]
+                volume = position.volume
+                avg_price = position.avg_price
 
                 last_price = datas[stock_code]['lastPrice']
 
@@ -158,15 +169,15 @@ class StopLossProgram:
                         if drawdown >= self.drawdown_threshold:
                             self.sell_stock(stock_code, volume, 0, "止盈策略", f"收益率{current_profit:.2%}")
                             logger.warning(
-                                f"卖出 {stock_code}，当前收益率 {current_profit:.2%}，"
+                                f"卖出 {stock_code}，当前收益率 {current_profit:.2%}，"  
                                 f"最高收益率 {self.max_profit[stock_code]:.2%}"
                             )
                     else:
                         logger.debug(
                             f"{stock_code} 当前收益率 {current_profit:.2%}，未达到止盈监控阈值"
                         )
-            else:
-                logger.error(f"未订阅股票 {stock_code} 的行情数据")
+                else:
+                    logger.warning(f"{stock_code} 的平均买入价格为 {avg_price}")
 
     def call_back_functions(self, data, last_update_time):
         """
@@ -181,9 +192,8 @@ class StopLossProgram:
             logger.info("开始更新持仓信息和订单状态")
             try:
                 self.load_max_profit()
-                self.positions = xt_trader.query_stock_positions(acc)
-                self.positions = [pos for pos in self.positions if pos.can_use_volume > 0]
-                logger.info(f"已更新持仓信息{[pos.stock_code for pos in self.positions]}")
+                self.update_positions()
+                logger.info(f"已更新持仓信息: {[pos.stock_code for pos in self.positions.values()]}")
 
                 # 撤销未完全成交的挂单
                 pending_orders = xt_trader.query_stock_orders(acc)
@@ -206,8 +216,7 @@ class StopLossProgram:
             return
 
         try:
-            self.positions = xt_trader.query_stock_positions(acc)
-            self.positions = [pos for pos in self.positions if pos.can_use_volume > 0]
+            self.update_positions()
             manager = Manager()
             last_update_time = manager.Value('d', time.time())
 
@@ -247,5 +256,3 @@ def stop_loss_main():
 
 if __name__ == '__main__':
     stop_loss_main()
-
-
