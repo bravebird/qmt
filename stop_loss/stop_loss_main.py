@@ -164,7 +164,7 @@ class StopLossProgram:
                     # 当当前收益率超过止盈阈值后，开始监控回撤
                     if self.max_profit[stock_code] >= self.profit_threshold:
                         drawdown = (self.max_profit[stock_code] - current_profit) / self.max_profit[stock_code]
-                        logger.debug(f"{stock_code} 当前回撤幅度为 {drawdown:.2%}")
+                        logger.debug(f"{stock_code} 当前盈利为{current_profit:.2%}；回撤幅度为 {drawdown:.2%}")
 
                         if drawdown >= self.drawdown_threshold:
                             self.sell_stock(stock_code, volume, 0, "止盈策略", f"收益率{current_profit:.2%}")
