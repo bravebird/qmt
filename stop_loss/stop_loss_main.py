@@ -136,58 +136,57 @@ class StopLossProgram:
         1. 当收益率达到止损阈值（-1%）时，立即卖出止损。
         2. 当收益率超过止盈阈值（如3%）后，若从最高收益率回撤超过设定值（如30%），则卖出止盈。
         """
-        with self.positions_lock:
-            stocks_set = set(self.positions.keys()) & set(datas.keys())
-            for stock_code in stocks_set:
-                position = self.positions[stock_code]
-                volume = position.volume
-                avg_price = position.avg_price
+        stocks_set = set(self.positions.keys()) & set(datas.keys())
+        for stock_code in stocks_set:
+            position = self.positions[stock_code]
+            volume = position.volume
+            avg_price = position.avg_price
+            last_price = datas[stock_code]['lastPrice']
 
-                last_price = datas[stock_code]['lastPrice']
+            if avg_price != 0:
 
-                if avg_price != 0:
-                    current_profit = (last_price - avg_price) / avg_price
+                current_profit = (last_price - avg_price) / avg_price
 
-                    # 检查是否达到止损阈值
-                    if current_profit <= self.stop_loss_threshold:
-                        self.sell_stock(stock_code, volume, 0, "止损策略", f"收益率{current_profit:.2%}")
-                        logger.warning(f"卖出 {stock_code}，当前收益率 {current_profit:.2%}，达到止损阈值")
-                        continue  # 已经卖出，不再检查止盈策略
+                # 检查是否达到止损阈值
+                if current_profit <= self.stop_loss_threshold:
+                    self.sell_stock(stock_code, volume, 0, "止损策略", f"收益率{current_profit:.2%}")
+                    logger.warning(f"卖出 {stock_code}，当前收益率 {current_profit:.2%}，达到止损阈值")
+                    continue  # 已经卖出，不再检查止盈策略
+                # 初始化或更新最高收益率
+                # self.load_max_profit()
+                max_profit_value = self.max_profit.get(stock_code, -999999)
+                # logger.info(f"{current_profit} + {max_profit_value}")
+                if current_profit >= max_profit_value:
+                    self.max_profit[stock_code] = current_profit
+                    self.save_max_profit()
+                    logger.info(f"更新 {stock_code} 的最高收益率为 {self.max_profit[stock_code]:.2%}")
+                # 当当前收益率超过止盈阈值后，开始监控回撤
+                if self.max_profit[stock_code] >= self.profit_threshold:
+                    drawdown = (self.max_profit[stock_code] - current_profit) / self.max_profit[stock_code]
+                    logger.debug(f"{stock_code} 当前盈利为{current_profit:.2%}；回撤幅度为 {drawdown:.2%}")
 
-                    # 初始化或更新最高收益率
-                    max_profit_value = self.max_profit.get(stock_code, current_profit)
-                    if current_profit > max_profit_value:
-                        self.max_profit[stock_code] = current_profit
-                        self.save_max_profit()
-                        logger.info(f"更新 {stock_code} 的最高收益率为 {self.max_profit[stock_code]:.2%}")
-
-                    # 当当前收益率超过止盈阈值后，开始监控回撤
-                    if self.max_profit[stock_code] >= self.profit_threshold:
-                        drawdown = (self.max_profit[stock_code] - current_profit) / self.max_profit[stock_code]
-                        logger.debug(f"{stock_code} 当前盈利为{current_profit:.2%}；回撤幅度为 {drawdown:.2%}")
-
-                        if drawdown >= self.drawdown_threshold:
-                            self.sell_stock(stock_code, volume, 0, "止盈策略", f"收益率{current_profit:.2%}")
-                            logger.warning(
-                                f"卖出 {stock_code}，当前收益率 {current_profit:.2%}，"  
-                                f"最高收益率 {self.max_profit[stock_code]:.2%}"
-                            )
-                    else:
-                        logger.debug(
-                            f"{stock_code} 当前收益率 {current_profit:.2%}，未达到止盈监控阈值"
+                    if drawdown >= self.drawdown_threshold:
+                        self.sell_stock(stock_code, volume, 0, "止盈策略", f"收益率{current_profit:.2%}")
+                        logger.warning(
+                            f"卖出 {stock_code}，当前收益率 {current_profit:.2%}，"  
+                            f"最高收益率 {self.max_profit[stock_code]:.2%}"
                         )
                 else:
-                    logger.warning(f"{stock_code} 的平均买入价格为 {avg_price}")
+                    logger.debug(
+                        f"{stock_code} 当前收益率 {current_profit:.2%}，未达到止盈监控阈值"
+                    )
+            else:
+                logger.warning(f"{stock_code} 的平均买入价格为 {avg_price}")
 
     def call_back_functions(self, data, last_update_time):
         """
         数据回调函数，每次数据更新时调用，用于执行止损和止盈逻辑。
         """
         if not is_transaction_hour():
+            logger.info("当前不在交易时间内。")
             return
 
         current_time = time.time()
-
         if current_time - last_update_time.value >= 600:
             logger.info("开始更新持仓信息和订单状态")
             try:
